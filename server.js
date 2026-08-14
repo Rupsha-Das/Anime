@@ -4,8 +4,10 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const AUDIO_DIR = path.join(__dirname, 'public', 'audio');
+const PLAYLIST_FILE = path.join(AUDIO_DIR, 'playlist.json');
 
-const SONGS = {
+const FALLBACK_SONGS = {
   opening: {
     title: 'The Opening Theme',
     tag: 'OP THEME',
@@ -63,6 +65,19 @@ const SONGS = {
   },
 };
 
+function loadSongs() {
+  try {
+    if (fs.existsSync(PLAYLIST_FILE)) {
+      const raw = fs.readFileSync(PLAYLIST_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch (error) {
+    console.warn('Could not load playlist.json, using built-in fallback:', error.message);
+  }
+  return FALLBACK_SONGS;
+}
+
 const WALLPAPERS = [
   { id: 1, name: 'Sakura Sunrise', ja: '桜の朝', mood: 'Hopeful', scene: 'sakura' },
   { id: 2, name: 'Neon Tokyo Night', ja: '夜の東京', mood: 'Electric', scene: 'tokyo' },
@@ -87,12 +102,12 @@ let listeners = 4120 + Math.floor(Math.random() * 900);
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/songs', (req, res) => {
-  res.json(SONGS);
+  res.json(loadSongs());
 });
 
 app.get('/api/playlists', (req, res) => {
   res.json(
-    Object.entries(SONGS).map(([id, p]) => ({
+    Object.entries(loadSongs()).map(([id, p]) => ({
       id,
       title: p.title,
       tag: p.tag,
@@ -118,7 +133,7 @@ app.get('/api/listeners', (req, res) => {
 });
 
 app.get('/api/audio/:file', (req, res) => {
-  const file = path.join(__dirname, 'public', 'audio', path.basename(req.params.file));
+  const file = path.join(AUDIO_DIR, path.basename(req.params.file));
   if (!fs.existsSync(file)) return res.status(404).json({ error: 'Not found' });
   const stat = fs.statSync(file);
   const range = req.headers.range;

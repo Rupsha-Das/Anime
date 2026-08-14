@@ -125,6 +125,161 @@ class Mixer {
   }
 }
 
+const THEMES = [
+  { title: 'Suzume', slug: 'suzume', mood: 'opening', key: 'opening', bpm: 120 },
+  { title: 'Neon Horizon', slug: 'neon-horizon', mood: 'night', key: 'night', bpm: 92 },
+  { title: 'Cherry Signal', slug: 'cherry-signal', mood: 'bright', key: 'opening', bpm: 128 },
+  { title: 'Moonlit Promise', slug: 'moonlit-promise', mood: 'ballad', key: 'ballad', bpm: 70 },
+  { title: 'Skyline Echo', slug: 'skyline-echo', mood: 'night', key: 'night', bpm: 96 },
+  { title: 'Festival Lights', slug: 'festival-lights', mood: 'festival', key: 'festival', bpm: 126 },
+  { title: 'Last Train Home', slug: 'last-train-home', mood: 'night', key: 'night', bpm: 100 },
+  { title: 'Blue April', slug: 'blue-april', mood: 'ballad', key: 'ballad', bpm: 74 },
+  { title: 'Midnight Bloom', slug: 'midnight-bloom', mood: 'night', key: 'night', bpm: 88 },
+  { title: 'First Snowfall', slug: 'first-snowfall', mood: 'ballad', key: 'ballad', bpm: 68 },
+];
+
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function makeTrack(seed, spec) {
+  const rnd = mulberry32(seed);
+  const m = new Mixer();
+  const beat = 60 / spec.bpm;
+  const bars = 10 + Math.floor(rnd() * 8);
+  const scalePool = [
+    [60, 62, 64, 67, 69],
+    [57, 60, 62, 64, 67],
+    [55, 57, 60, 62, 65],
+    [62, 64, 67, 69, 72],
+  ];
+  const chords = [
+    [60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]
+  ];
+  const scale = scalePool[Math.floor(rnd() * scalePool.length)];
+  const chord = chords[Math.floor(rnd() * chords.length)];
+  const melody = Array.from({ length: 16 }, () => scale[Math.floor(rnd() * scale.length)] + (rnd() > .75 ? 12 : 0));
+  const bass = [chord[0] - 24, chord[1] - 24, chord[0] - 19, chord[2] - 24];
+
+  for (let bar = 0; bar < bars; bar++) {
+    const root = chord[bar % chord.length];
+    const phrase = melody[(bar * 2) % melody.length];
+    for (let beatIndex = 0; beatIndex < 4; beatIndex++) {
+      const t = (bar * 4 + beatIndex) * beat;
+      if (spec.mood === 'opening' || spec.mood === 'bright') {
+        m.osc('square', midiToFreq(root), t, beat * 0.9, 0.045, { attack: 0.005, release: 0.18, detune: 6 });
+        m.osc('sine', midiToFreq(bass[(bar + beatIndex) % bass.length]), t, beat * 3.8, 0.14, { attack: 0.03, release: 0.45 });
+      } else if (spec.mood === 'ballad') {
+        m.osc('sine', midiToFreq(root), t, beat * 2.6, 0.09, { attack: 0.08, release: 0.8 });
+        m.osc('tri', midiToFreq(bass[(bar + beatIndex) % bass.length]), t, beat * 3.2, 0.18, { attack: 0.12, release: 1.1 });
+      } else if (spec.mood === 'festival') {
+        m.osc('tri', midiToFreq(root + 12), t, beat * 0.8, 0.09, { attack: 0.01, release: 0.25 });
+        m.osc('saw', midiToFreq(bass[(bar + beatIndex) % bass.length]), t, beat * 2.4, 0.12, { attack: 0.03, release: 0.35 });
+      } else {
+        m.osc('saw', midiToFreq(root), t, beat * 1.2, 0.07, { attack: 0.04, release: 0.3, detune: 9 });
+        m.osc('sine', midiToFreq(bass[(bar + beatIndex) % bass.length]), t, beat * 3.4, 0.15, { attack: 0.03, release: 0.5 });
+      }
+
+      if (beatIndex % 2 === 0) m.kick(t, spec.mood === 'ballad' ? 0.45 : 0.72);
+      if (beatIndex % 2 === 1) m.hat(t, spec.mood === 'ballad' ? 0.04 : 0.1);
+      if (beatIndex === 2 && spec.mood !== 'ballad') m.snare(t, 0.24);
+    }
+
+    for (let i = 0; i < 8; i++) {
+      const t = (bar * 4) * beat + i * beat * 0.5;
+      const note = melody[(bar * 8 + i) % melody.length];
+      m.osc(spec.mood === 'ballad' ? 'tri' : 'sine', midiToFreq(note + (spec.mood === 'night' ? 12 : 0)), t, beat * 0.45, 0.08, { attack: 0.01, release: 0.3 });
+    }
+
+    if (spec.mood === 'festival') {
+      m.osc('sine', midiToFreq(84 + (bar % 5)), bar * 4 * beat + 3 * beat, beat * 0.9, 0.12, { attack: 0.005, release: 0.9 });
+    }
+  }
+
+  return m;
+}
+
+function buildPlaylistManifest() {
+  const manifest = {
+    opening: {
+      title: 'The Opening Theme',
+      tag: 'OP THEME',
+      accent: '#ff7ec8',
+      description: 'Original tracks generated locally. Replace them with your own licensed audio any time.',
+      songs: []
+    },
+    ballad: {
+      title: 'Ballads',
+      tag: 'BALLAD ARC',
+      accent: '#8be9fd',
+      description: 'Soft and emotional tracks.',
+      songs: []
+    },
+    night: {
+      title: 'Night Drive',
+      tag: 'NIGHT ARC',
+      accent: '#bd93f9',
+      description: 'Neon and midnight energy.',
+      songs: []
+    },
+    training: {
+      title: 'Training',
+      tag: 'TRAINING ARC',
+      accent: '#ffb86c',
+      description: 'High-energy tracks.',
+      songs: []
+    },
+    villain: {
+      title: 'Villain',
+      tag: 'VILLAIN ERA',
+      accent: '#ff5555',
+      description: 'Dark dramatic tracks.',
+      songs: []
+    },
+    festival: {
+      title: 'Festival',
+      tag: 'FESTIVAL ARC',
+      accent: '#f1fa8c',
+      description: 'Bright summer tracks.',
+      songs: []
+    },
+  };
+
+  const seedSpecs = [
+    { title: 'Suzume', file: 'sakura-opening.wav', duration: '0:34', bucket: 'opening' },
+    { title: 'Festival Fireworks', file: 'festival-fireworks.wav', duration: '0:24', bucket: 'festival' },
+    { title: 'Ballad of Two', file: 'ballad-of-two.wav', duration: '0:31', bucket: 'ballad' },
+    { title: 'Midnight Drive', file: 'midnight-drive.wav', duration: '0:35', bucket: 'night' },
+    { title: 'Level Up', file: 'level-up.wav', duration: '0:29', bucket: 'training' },
+    { title: "Villain's Anthem", file: 'villain-anthem.wav', duration: '0:21', bucket: 'villain' },
+  ];
+
+  seedSpecs.forEach((song) => {
+    manifest[song.bucket].songs.push({ title: song.title, artist: 'ANIMESCAPE', file: song.file, duration: song.duration });
+  });
+
+  for (let i = 0; i < 50; i++) {
+    const spec = THEMES[i % THEMES.length];
+    const slug = spec.slug + '-' + String(i + 1).padStart(2, '0');
+    const filename = `${slug}.wav`;
+    const title = `${spec.title} ${i + 1}`;
+    const m = makeTrack(1000 + i * 17, spec);
+    const file = path.join(OUTDIR, filename);
+    m.write(file);
+    const duration = `${Math.floor(m.duration() / 60)}:${String(Math.round(m.duration() % 60)).padStart(2, '0')}`;
+    const bucket = manifest[spec.key] ? spec.key : 'opening';
+    manifest[bucket].songs.push({ title, artist: 'ANIMESCAPE', file: filename, duration });
+    console.log('  -> ' + filename + '  (' + Math.round(m.duration()) + 's, ' + fs.statSync(file).size + ' bytes)');
+  }
+
+  return manifest;
+}
+
 // ---------- Track 1: SAKURA OPENING (C major, bright, 120 BPM) ----------
 function trackOp() {
   const m = new Mixer();
@@ -298,4 +453,6 @@ for (const [name, fn] of tracks) {
   m.write(file);
   console.log('  -> ' + name + '.wav  (' + Math.round(m.duration()) + 's, ' + fs.statSync(file).size + ' bytes)');
 }
+const playlistManifest = buildPlaylistManifest();
+fs.writeFileSync(path.join(OUTDIR, 'playlist.json'), JSON.stringify(playlistManifest, null, 2));
 console.log('Done. Tracks ready in public/audio/');

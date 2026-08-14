@@ -1,0 +1,386 @@
+{
+  "opening": {
+    "title": "The Opening Theme",
+    "tag": "OP THEME",
+    "accent": "#ff7ec8",
+    "description": "Original tracks generated locally. Replace them with your own licensed audio any time.",
+    "songs": [
+      {
+        "title": "Suzume",
+        "artist": "ANIMESCAPE",
+        "file": "sakura-opening.wav",
+        "duration": "0:34"
+      },
+      {
+        "title": "Suzume 1",
+        "artist": "ANIMESCAPE",
+        "file": "suzume-01.wav",
+        "duration": "0:34"
+      },
+      {
+        "title": "Cherry Signal 3",
+        "artist": "ANIMESCAPE",
+        "file": "cherry-signal-03.wav",
+        "duration": "0:32"
+      },
+      {
+        "title": "Suzume 11",
+        "artist": "ANIMESCAPE",
+        "file": "suzume-11.wav",
+        "duration": "0:28"
+      },
+      {
+        "title": "Cherry Signal 13",
+        "artist": "ANIMESCAPE",
+        "file": "cherry-signal-13.wav",
+        "duration": "0:25"
+      },
+      {
+        "title": "Suzume 21",
+        "artist": "ANIMESCAPE",
+        "file": "suzume-21.wav",
+        "duration": "0:30"
+      },
+      {
+        "title": "Cherry Signal 23",
+        "artist": "ANIMESCAPE",
+        "file": "cherry-signal-23.wav",
+        "duration": "0:32"
+      },
+      {
+        "title": "Suzume 31",
+        "artist": "ANIMESCAPE",
+        "file": "suzume-31.wav",
+        "duration": "0:28"
+      },
+      {
+        "title": "Cherry Signal 33",
+        "artist": "ANIMESCAPE",
+        "file": "cherry-signal-33.wav",
+        "duration": "0:21"
+      },
+      {
+        "title": "Suzume 41",
+        "artist": "ANIMESCAPE",
+        "file": "suzume-41.wav",
+        "duration": "0:30"
+      },
+      {
+        "title": "Cherry Signal 43",
+        "artist": "ANIMESCAPE",
+        "file": "cherry-signal-43.wav",
+        "duration": "0:21"
+      }
+    ]
+  },
+  "ballad": {
+    "title": "Ballads",
+    "tag": "BALLAD ARC",
+    "accent": "#8be9fd",
+    "description": "Soft and emotional tracks.",
+    "songs": [
+      {
+        "title": "Ballad of Two",
+        "artist": "ANIMESCAPE",
+        "file": "ballad-of-two.wav",
+        "duration": "0:31"
+      },
+      {
+        "title": "Moonlit Promise 4",
+        "artist": "ANIMESCAPE",
+        "file": "moonlit-promise-04.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Blue April 8",
+        "artist": "ANIMESCAPE",
+        "file": "blue-april-08.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "First Snowfall 10",
+        "artist": "ANIMESCAPE",
+        "file": "first-snowfall-10.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Moonlit Promise 14",
+        "artist": "ANIMESCAPE",
+        "file": "moonlit-promise-14.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Blue April 18",
+        "artist": "ANIMESCAPE",
+        "file": "blue-april-18.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "First Snowfall 20",
+        "artist": "ANIMESCAPE",
+        "file": "first-snowfall-20.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Moonlit Promise 24",
+        "artist": "ANIMESCAPE",
+        "file": "moonlit-promise-24.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Blue April 28",
+        "artist": "ANIMESCAPE",
+        "file": "blue-april-28.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "First Snowfall 30",
+        "artist": "ANIMESCAPE",
+        "file": "first-snowfall-30.wav",
+        "duration": "0:39"
+      },
+      {
+        "title": "Moonlit Promise 34",
+        "artist": "ANIMESCAPE",
+        "file": "moonlit-promise-34.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Blue April 38",
+        "artist": "ANIMESCAPE",
+        "file": "blue-april-38.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "First Snowfall 40",
+        "artist": "ANIMESCAPE",
+        "file": "first-snowfall-40.wav",
+        "duration": "0:39"
+      },
+      {
+        "title": "Moonlit Promise 44",
+        "artist": "ANIMESCAPE",
+        "file": "moonlit-promise-44.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Blue April 48",
+        "artist": "ANIMESCAPE",
+        "file": "blue-april-48.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "First Snowfall 50",
+        "artist": "ANIMESCAPE",
+        "file": "first-snowfall-50.wav",
+        "duration": "0:40"
+      }
+    ]
+  },
+  "night": {
+    "title": "Night Drive",
+    "tag": "NIGHT ARC",
+    "accent": "#bd93f9",
+    "description": "Neon and midnight energy.",
+    "songs": [
+      {
+        "title": "Midnight Drive",
+        "artist": "ANIMESCAPE",
+        "file": "midnight-drive.wav",
+        "duration": "0:35"
+      },
+      {
+        "title": "Neon Horizon 2",
+        "artist": "ANIMESCAPE",
+        "file": "neon-horizon-02.wav",
+        "duration": "0:31"
+      },
+      {
+        "title": "Skyline Echo 5",
+        "artist": "ANIMESCAPE",
+        "file": "skyline-echo-05.wav",
+        "duration": "0:35"
+      },
+      {
+        "title": "Last Train Home 7",
+        "artist": "ANIMESCAPE",
+        "file": "last-train-home-07.wav",
+        "duration": "0:31"
+      },
+      {
+        "title": "Midnight Bloom 9",
+        "artist": "ANIMESCAPE",
+        "file": "midnight-bloom-09.wav",
+        "duration": "0:35"
+      },
+      {
+        "title": "Neon Horizon 12",
+        "artist": "ANIMESCAPE",
+        "file": "neon-horizon-12.wav",
+        "duration": "0:29"
+      },
+      {
+        "title": "Skyline Echo 15",
+        "artist": "ANIMESCAPE",
+        "file": "skyline-echo-15.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Last Train Home 17",
+        "artist": "ANIMESCAPE",
+        "file": "last-train-home-17.wav",
+        "duration": "0:29"
+      },
+      {
+        "title": "Midnight Bloom 19",
+        "artist": "ANIMESCAPE",
+        "file": "midnight-bloom-19.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Neon Horizon 22",
+        "artist": "ANIMESCAPE",
+        "file": "neon-horizon-22.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Skyline Echo 25",
+        "artist": "ANIMESCAPE",
+        "file": "skyline-echo-25.wav",
+        "duration": "0:35"
+      },
+      {
+        "title": "Last Train Home 27",
+        "artist": "ANIMESCAPE",
+        "file": "last-train-home-27.wav",
+        "duration": "0:34"
+      },
+      {
+        "title": "Midnight Bloom 29",
+        "artist": "ANIMESCAPE",
+        "file": "midnight-bloom-29.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Neon Horizon 32",
+        "artist": "ANIMESCAPE",
+        "file": "neon-horizon-32.wav",
+        "duration": "0:31"
+      },
+      {
+        "title": "Skyline Echo 35",
+        "artist": "ANIMESCAPE",
+        "file": "skyline-echo-35.wav",
+        "duration": "0:37"
+      },
+      {
+        "title": "Last Train Home 37",
+        "artist": "ANIMESCAPE",
+        "file": "last-train-home-37.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Midnight Bloom 39",
+        "artist": "ANIMESCAPE",
+        "file": "midnight-bloom-39.wav",
+        "duration": "0:30"
+      },
+      {
+        "title": "Neon Horizon 42",
+        "artist": "ANIMESCAPE",
+        "file": "neon-horizon-42.wav",
+        "duration": "0:40"
+      },
+      {
+        "title": "Skyline Echo 45",
+        "artist": "ANIMESCAPE",
+        "file": "skyline-echo-45.wav",
+        "duration": "0:32"
+      },
+      {
+        "title": "Last Train Home 47",
+        "artist": "ANIMESCAPE",
+        "file": "last-train-home-47.wav",
+        "duration": "0:38"
+      },
+      {
+        "title": "Midnight Bloom 49",
+        "artist": "ANIMESCAPE",
+        "file": "midnight-bloom-49.wav",
+        "duration": "0:33"
+      }
+    ]
+  },
+  "training": {
+    "title": "Training",
+    "tag": "TRAINING ARC",
+    "accent": "#ffb86c",
+    "description": "High-energy tracks.",
+    "songs": [
+      {
+        "title": "Level Up",
+        "artist": "ANIMESCAPE",
+        "file": "level-up.wav",
+        "duration": "0:29"
+      }
+    ]
+  },
+  "villain": {
+    "title": "Villain",
+    "tag": "VILLAIN ERA",
+    "accent": "#ff5555",
+    "description": "Dark dramatic tracks.",
+    "songs": [
+      {
+        "title": "Villain's Anthem",
+        "artist": "ANIMESCAPE",
+        "file": "villain-anthem.wav",
+        "duration": "0:21"
+      }
+    ]
+  },
+  "festival": {
+    "title": "Festival",
+    "tag": "FESTIVAL ARC",
+    "accent": "#f1fa8c",
+    "description": "Bright summer tracks.",
+    "songs": [
+      {
+        "title": "Festival Fireworks",
+        "artist": "ANIMESCAPE",
+        "file": "festival-fireworks.wav",
+        "duration": "0:24"
+      },
+      {
+        "title": "Festival Lights 6",
+        "artist": "ANIMESCAPE",
+        "file": "festival-lights-06.wav",
+        "duration": "0:24"
+      },
+      {
+        "title": "Festival Lights 16",
+        "artist": "ANIMESCAPE",
+        "file": "festival-lights-16.wav",
+        "duration": "0:28"
+      },
+      {
+        "title": "Festival Lights 26",
+        "artist": "ANIMESCAPE",
+        "file": "festival-lights-26.wav",
+        "duration": "0:24"
+      },
+      {
+        "title": "Festival Lights 36",
+        "artist": "ANIMESCAPE",
+        "file": "festival-lights-36.wav",
+        "duration": "0:24"
+      },
+      {
+        "title": "Festival Lights 46",
+        "artist": "ANIMESCAPE",
+        "file": "festival-lights-46.wav",
+        "duration": "0:30"
+      }
+    ]
+  }
+}
