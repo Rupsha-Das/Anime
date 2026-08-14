@@ -1,0 +1,14 @@
+{
+  "name": "animescape",
+  "version": "1.0.0",
+  "description": "ANIMESCAPE - Your life deserves an opening theme. Anime music radio with art gallery.",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "songs": "node generate-audio.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

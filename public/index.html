@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Anime-inspired music player with a single cinematic hero and a hidden playlist drawer." />
+  <title>ANIME</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="backdrop">
+    <div class="sky-glow sky-glow-a"></div>
+    <div class="sky-glow sky-glow-b"></div>
+    <div class="sky-stars"></div>
+    <div class="paper-noise"></div>
+  </div>
+
+  <div class="site-shell">
+    <header class="topbar glass-card">
+      <div class="top-left">
+        <div class="clock-pill"><span>10:17 PM</span><i>◔</i></div>
+      </div>
+
+      <div class="top-center">
+        <div class="listeners-pill glass-card">
+          <span class="live-dot"></span>
+          <strong id="listenerCount">3,842</strong>
+          <span class="listeners-jp">人が聴いています</span>
+          <small>people listening now</small>
+        </div>
+      </div>
+
+      <div class="top-right">
+        <button class="icon-btn weather-btn active" data-fx="snow" title="Snow">❄</button>
+        <button class="icon-btn weather-btn" data-fx="rain" title="Rain">☂</button>
+        <button class="icon-btn weather-btn" data-fx="sakura" title="Sakura">✿</button>
+        <button class="icon-btn weather-btn" data-fx="sparkles" title="Sparkles">✦</button>
+        <button class="icon-btn" data-action="playlist-toggle" title="Playlist">☰</button>
+        <button class="icon-btn" aria-label="Profile">◯</button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="hero" id="top">
+        <div class="hero-art" aria-hidden="true">
+          <div class="scene-photo"></div>
+        </div>
+
+        <div class="hero-copy">
+          <h1 class="hero-title"><span class="jp">アニメ</span><span class="en">Anime</span></h1>
+        </div>
+      </section>
+
+      <section class="player-bar glass-card" id="playerBar">
+        <div class="player-art">
+          <div class="player-thumb"></div>
+        </div>
+
+        <div class="player-meta">
+          <strong id="npTitle">Sakura Opening</strong>
+          <span id="npArtist">Aimer</span>
+          <div class="player-progress">
+            <span id="npCur">1:24</span>
+            <div class="progress-track"><i id="npFill"></i></div>
+            <span id="npDur">3:04</span>
+          </div>
+        </div>
+
+        <div class="player-controls">
+          <button id="shuffleBtn" aria-label="Shuffle">⇄</button>
+          <button id="prevBtn" aria-label="Previous track">⟨</button>
+          <button id="playBtn" class="play-btn" aria-label="Play or pause">▶</button>
+          <button id="nextBtn" aria-label="Next track">⟩</button>
+          <button id="repeatBtn" aria-label="Repeat">↻</button>
+        </div>
+
+        <div class="player-side">
+          <button id="npHeart" class="side-btn" aria-label="Like">♥</button>
+          <button class="side-btn" aria-label="Volume">♪</button>
+        </div>
+      </section>
+
+      <section class="playlist-panel glass-card" id="playlistPanel" aria-labelledby="playlistTitle">
+        <div class="playlist-head">
+          <div>
+            <p class="mini-label">Playlist</p>
+            <h2 id="playlistTitle">Playlist</h2>
+          </div>
+          <button class="close-btn" data-action="playlist-close" aria-label="Close playlist">×</button>
+        </div>
+        <div class="playlist-list" id="trackList"></div>
+      </section>
+    </main>
+  </div>
+
+  <a class="instagram-follow glass-card" href="https://www.instagram.com/rupsha.py/" target="_blank" rel="noreferrer">
+    <span class="instagram-mark">⌁</span>
+    <span>
+      <strong>Follow Rupsha.py</strong>
+      <small>Instagram</small>
+    </span>
+  </a>
+
+  <audio id="audio" preload="metadata"></audio>
+  <script src="script.js"></script>
+</body>
+</html>
