@@ -1,82 +1,85 @@
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const AUDIO_DIR = path.join(__dirname, 'public', 'audio');
-const PLAYLIST_FILE = path.join(AUDIO_DIR, 'playlist.json');
+const YOUTUBE_API_KEY = process.env.VITE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY || '';
+const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 
-const FALLBACK_SONGS = {
-  opening: {
-    title: 'The Opening Theme',
-    tag: 'OP THEME',
-    accent: '#ff7ec8',
-    description: 'Sakura petals, sunlight, and the moment everything begins. Press play on your own intro.',
-    songs: [
-      { title: 'Suzume', artist: 'ANIMESCAPE', file: 'sakura-opening.wav', duration: '0:34' },
-      { title: 'Festival Fireworks', artist: 'ANIMESCAPE', file: 'festival-fireworks.wav', duration: '0:24' },
-    ],
-  },
-  ballad: {
-    title: 'The Ballad of Two',
-    tag: 'BALLAD ARC',
-    accent: '#8be9fd',
-    description: 'Soft focus, warm light, and a little bit of forever. The slow scenes of your story.',
-    songs: [
-      { title: 'Ballad of Two', artist: 'ANIMESCAPE', file: 'ballad-of-two.wav', duration: '0:31' },
-    ],
-  },
-  night: {
-    title: 'Midnight Drive',
-    tag: 'LATE NIGHT ARC',
-    accent: '#bd93f9',
-    description: 'Neon reflections on wet asphalt. For the thoughts that only show up after midnight.',
-    songs: [
-      { title: 'Midnight Drive', artist: 'ANIMESCAPE', file: 'midnight-drive.wav', duration: '0:35' },
-    ],
-  },
-  training: {
-    title: 'Level Up',
-    tag: 'TRAINING ARC',
-    accent: '#ffb86c',
-    description: 'Turn the volume up. You have somewhere to be, and the world is not ready for you.',
-    songs: [
-      { title: 'Level Up', artist: 'ANIMESCAPE', file: 'level-up.wav', duration: '0:29' },
-    ],
-  },
-  villain: {
-    title: "Villain's Anthem",
-    tag: 'VILLAIN ERA',
-    accent: '#ff5555',
-    description: 'For the chapter where you stop explaining yourself. The theme plays when you walk in.',
-    songs: [
-      { title: "Villain's Anthem", artist: 'ANIMESCAPE', file: 'villain-anthem.wav', duration: '0:21' },
-    ],
-  },
-  festival: {
-    title: 'Festival Fireworks',
-    tag: 'FESTIVAL ARC',
-    accent: '#f1fa8c',
-    description: 'Lanterns, yukatas, and summer nights. The montage scene nobody can forget.',
-    songs: [
-      { title: 'Festival Fireworks', artist: 'ANIMESCAPE', file: 'festival-fireworks.wav', duration: '0:24' },
-    ],
-  },
-};
-
-function loadSongs() {
-  try {
-    if (fs.existsSync(PLAYLIST_FILE)) {
-      const raw = fs.readFileSync(PLAYLIST_FILE, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') return parsed;
-    }
-  } catch (error) {
-    console.warn('Could not load playlist.json, using built-in fallback:', error.message);
-  }
-  return FALLBACK_SONGS;
-}
+const LOCAL_ANIME_CATALOG = [
+  { id: 'naruto-haruka-kanata', title: 'Haruka Kanata', artist: 'Asian Kung-Fu Generation', anime: 'Naruto', category: 'opening', youtubeVideoId: 'eP9r7W1K5YQ', youtubeUrl: 'https://www.youtube.com/watch?v=eP9r7W1K5YQ', thumbnail: 'https://i.ytimg.com/vi/eP9r7W1K5YQ/hqdefault.jpg', duration: 230, spotifyUrl: '' },
+  { id: 'naruto-shippuden-sign', title: 'Sign', artist: 'FLOW', anime: 'Naruto Shippuden', category: 'opening', youtubeVideoId: 'V5ZpL1XxX7o', youtubeUrl: 'https://www.youtube.com/watch?v=V5ZpL1XxX7o', thumbnail: 'https://i.ytimg.com/vi/V5ZpL1XxX7o/hqdefault.jpg', duration: 252, spotifyUrl: '' },
+  { id: 'naruto-blue-bird', title: 'Blue Bird', artist: 'Ikimono Gakari', anime: 'Naruto Shippuden', category: 'opening', youtubeVideoId: '8PxxEw7E7vE', youtubeUrl: 'https://www.youtube.com/watch?v=8PxxEw7E7vE', thumbnail: 'https://i.ytimg.com/vi/8PxxEw7E7vE/hqdefault.jpg', duration: 227, spotifyUrl: '' },
+  { id: 'naruto-silhouette', title: 'Silhouette', artist: 'Kana-Boon', anime: 'Naruto Shippuden', category: 'opening', youtubeVideoId: '1lYJug5ZI5Q', youtubeUrl: 'https://www.youtube.com/watch?v=1lYJug5ZI5Q', thumbnail: 'https://i.ytimg.com/vi/1lYJug5ZI5Q/hqdefault.jpg', duration: 234, spotifyUrl: '' },
+  { id: 'one-piece-we-are', title: 'We Are!', artist: 'Hiroshi Kitadani', anime: 'One Piece', category: 'opening', youtubeVideoId: '3Q1rGN6dEq8', youtubeUrl: 'https://www.youtube.com/watch?v=3Q1rGN6dEq8', thumbnail: 'https://i.ytimg.com/vi/3Q1rGN6dEq8/hqdefault.jpg', duration: 214, spotifyUrl: '' },
+  { id: 'one-piece-hope', title: 'Hope', artist: 'Namie Amuro', anime: 'One Piece', category: 'opening', youtubeVideoId: 'g-1d4nVJxq0', youtubeUrl: 'https://www.youtube.com/watch?v=g-1d4nVJxq0', thumbnail: 'https://i.ytimg.com/vi/g-1d4nVJxq0/hqdefault.jpg', duration: 192, spotifyUrl: '' },
+  { id: 'one-piece-dreams', title: 'DREAMS', artist: 'The Song of One Piece', anime: 'One Piece', category: 'opening', youtubeVideoId: 'fD0a4MjVqfU', youtubeUrl: 'https://www.youtube.com/watch?v=fD0a4MjVqfU', thumbnail: 'https://i.ytimg.com/vi/fD0a4MjVqfU/hqdefault.jpg', duration: 202, spotifyUrl: '' },
+  { id: 'bleach-rolling-star', title: 'Rolling Star', artist: 'YUI', anime: 'Bleach', category: 'opening', youtubeVideoId: 'S3rZ0Kqij0Y', youtubeUrl: 'https://www.youtube.com/watch?v=S3rZ0Kqij0Y', thumbnail: 'https://i.ytimg.com/vi/S3rZ0Kqij0Y/hqdefault.jpg', duration: 235, spotifyUrl: '' },
+  { id: 'bleach-the-world-ends', title: 'The World Ends', artist: 'TFN', anime: 'Bleach', category: 'opening', youtubeVideoId: 'GmJIca6sKxY', youtubeUrl: 'https://www.youtube.com/watch?v=GmJIca6sKxY', thumbnail: 'https://i.ytimg.com/vi/GmJIca6sKxY/hqdefault.jpg', duration: 226, spotifyUrl: '' },
+  { id: 'bleach-a-dream', title: 'Asterisk', artist: 'ORANGE RANGE', anime: 'Bleach', category: 'opening', youtubeVideoId: 'mE7D3nQvVJc', youtubeUrl: 'https://www.youtube.com/watch?v=mE7D3nQvVJc', thumbnail: 'https://i.ytimg.com/vi/mE7D3nQvVJc/hqdefault.jpg', duration: 210, spotifyUrl: '' },
+  { id: 'aot-guren-no-yumiya', title: 'Guren no Yumiya', artist: 'Linked Horizon', anime: 'Attack on Titan', category: 'opening', youtubeVideoId: 'M7lc1UVf-VE', youtubeUrl: 'https://www.youtube.com/watch?v=M7lc1UVf-VE', thumbnail: 'https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg', duration: 264, spotifyUrl: '' },
+  { id: 'aot-shinzou-wo-sasageyo', title: 'Shinzou wo Sasageyo!', artist: 'Linked Horizon', anime: 'Attack on Titan', category: 'opening', youtubeVideoId: 'nQ-1M5IR7g0', youtubeUrl: 'https://www.youtube.com/watch?v=nQ-1M5IR7g0', thumbnail: 'https://i.ytimg.com/vi/nQ-1M5IR7g0/hqdefault.jpg', duration: 273, spotifyUrl: '' },
+  { id: 'slayer-gurenge', title: 'Gurenge', artist: 'LiSA', anime: 'Demon Slayer', category: 'opening', youtubeVideoId: 'u4qkrA-1wY8', youtubeUrl: 'https://www.youtube.com/watch?v=u4qkrA-1wY8', thumbnail: 'https://i.ytimg.com/vi/u4qkrA-1wY8/hqdefault.jpg', duration: 229, spotifyUrl: '' },
+  { id: 'slayer-kasane', title: 'Homura', artist: 'LiSA', anime: 'Demon Slayer', category: 'opening', youtubeVideoId: 'xAJzjIqD7S8', youtubeUrl: 'https://www.youtube.com/watch?v=xAJzjIqD7S8', thumbnail: 'https://i.ytimg.com/vi/xAJzjIqD7S8/hqdefault.jpg', duration: 228, spotifyUrl: '' },
+  { id: 'jjk-kaikai-kitan', title: 'Kaikai Kitan', artist: 'Eve', anime: 'Jujutsu Kaisen', category: 'opening', youtubeVideoId: 'xPC6L65aEE8', youtubeUrl: 'https://www.youtube.com/watch?v=xPC6L65aEE8', thumbnail: 'https://i.ytimg.com/vi/xPC6L65aEE8/hqdefault.jpg', duration: 235, spotifyUrl: '' },
+  { id: 'jjk-specialz', title: 'Specialz', artist: 'King Gnu', anime: 'Jujutsu Kaisen', category: 'opening', youtubeVideoId: 'T7S3E9nKQ1o', youtubeUrl: 'https://www.youtube.com/watch?v=T7S3E9nKQ1o', thumbnail: 'https://i.ytimg.com/vi/T7S3E9nKQ1o/hqdefault.jpg', duration: 234, spotifyUrl: '' },
+  { id: 'mha-peace-sign', title: 'Peace Sign', artist: 'Kenshi Yonezu', anime: 'My Hero Academia', category: 'opening', youtubeVideoId: '4kXS4zNw0g8', youtubeUrl: 'https://www.youtube.com/watch?v=4kXS4zNw0g8', thumbnail: 'https://i.ytimg.com/vi/4kXS4zNw0g8/hqdefault.jpg', duration: 218, spotifyUrl: '' },
+  { id: 'mha-odd-future', title: 'Odd Future', artist: 'UVERworld', anime: 'My Hero Academia', category: 'opening', youtubeVideoId: 'uM1XkR9R7d8', youtubeUrl: 'https://www.youtube.com/watch?v=uM1XkR9R7d8', thumbnail: 'https://i.ytimg.com/vi/uM1XkR9R7d8/hqdefault.jpg', duration: 217, spotifyUrl: '' },
+  { id: 'sao-crossing-field', title: 'Crossing Field', artist: 'LiSA', anime: 'Sword Art Online', category: 'opening', youtubeVideoId: 'Hc3JdOLhQqQ', youtubeUrl: 'https://www.youtube.com/watch?v=Hc3JdOLhQqQ', thumbnail: 'https://i.ytimg.com/vi/Hc3JdOLhQqQ/hqdefault.jpg', duration: 232, spotifyUrl: '' },
+  { id: 'sao-inori-no-katachi', title: 'Inori no Katachi', artist: 'Aoi Tada', anime: 'Sword Art Online', category: 'ending', youtubeVideoId: 'n8QYHk8UVnA', youtubeUrl: 'https://www.youtube.com/watch?v=n8QYHk8UVnA', thumbnail: 'https://i.ytimg.com/vi/n8QYHk8UVnA/hqdefault.jpg', duration: 242, spotifyUrl: '' },
+  { id: 'your-name-kimi-no-nawa', title: 'Kimi no Nawa', artist: 'RADWIMPS', anime: 'Your Name', category: 'romance', youtubeVideoId: 'GkXxvM0jK8Q', youtubeUrl: 'https://www.youtube.com/watch?v=GkXxvM0jK8Q', thumbnail: 'https://i.ytimg.com/vi/GkXxvM0jK8Q/hqdefault.jpg', duration: 285, spotifyUrl: '' },
+  { id: 'your-name-zenzenzense', title: 'Zenzenzense', artist: 'RADWIMPS', anime: 'Your Name', category: 'romance', youtubeVideoId: '0oI1pF9X0JQ', youtubeUrl: 'https://www.youtube.com/watch?v=0oI1pF9X0JQ', thumbnail: 'https://i.ytimg.com/vi/0oI1pF9X0JQ/hqdefault.jpg', duration: 278, spotifyUrl: '' },
+  { id: 'suzume-suzume-theme', title: 'Suzume', artist: 'Toaka', anime: 'Suzume', category: 'night', youtubeVideoId: 'kMoj8eW2L9A', youtubeUrl: 'https://www.youtube.com/watch?v=kMoj8eW2L9A', thumbnail: 'https://i.ytimg.com/vi/kMoj8eW2L9A/hqdefault.jpg', duration: 261, spotifyUrl: '' },
+  { id: 'silent-voice-echo', title: 'A Silent Voice Theme', artist: 'Mitski', anime: 'A Silent Voice', category: 'emotional', youtubeVideoId: 'K-dm2a8mO4Q', youtubeUrl: 'https://www.youtube.com/watch?v=K-dm2a8mO4Q', thumbnail: 'https://i.ytimg.com/vi/K-dm2a8mO4Q/hqdefault.jpg', duration: 266, spotifyUrl: '' },
+  { id: 'tokyo-ghoul-unravel', title: 'Unravel', artist: 'TK from Ling Tosite Sigure', anime: 'Tokyo Ghoul', category: 'opening', youtubeVideoId: 'RvxzWf9zR4Q', youtubeUrl: 'https://www.youtube.com/watch?v=RvxzWf9zR4Q', thumbnail: 'https://i.ytimg.com/vi/RvxzWf9zR4Q/hqdefault.jpg', duration: 248, spotifyUrl: '' },
+  { id: 'death-note-the-world', title: 'The World', artist: 'XO', anime: 'Death Note', category: 'opening', youtubeVideoId: '3vJ7kZK8H4Q', youtubeUrl: 'https://www.youtube.com/watch?v=3vJ7kZK8H4Q', thumbnail: 'https://i.ytimg.com/vi/3vJ7kZK8H4Q/hqdefault.jpg', duration: 219, spotifyUrl: '' },
+  { id: 'hunter-hunter-departure', title: 'Departure!', artist: 'Masatoshi Ono', anime: 'Hunter × Hunter', category: 'opening', youtubeVideoId: 'q_s3Bn2R1T0', youtubeUrl: 'https://www.youtube.com/watch?v=q_s3Bn2R1T0', thumbnail: 'https://i.ytimg.com/vi/q_s3Bn2R1T0/hqdefault.jpg', duration: 210, spotifyUrl: '' },
+  { id: 'fma-again', title: 'Again', artist: 'Yui', anime: 'Fullmetal Alchemist: Brotherhood', category: 'opening', youtubeVideoId: 'D2XH6H4Uj0k', youtubeUrl: 'https://www.youtube.com/watch?v=D2XH6H4Uj0k', thumbnail: 'https://i.ytimg.com/vi/D2XH6H4Uj0k/hqdefault.jpg', duration: 225, spotifyUrl: '' },
+  { id: 'haikyuu-imagination', title: 'Imagination', artist: 'Spyair', anime: 'Haikyuu!!', category: 'opening', youtubeVideoId: 'cR0dK1M0ghE', youtubeUrl: 'https://www.youtube.com/watch?v=cR0dK1M0ghE', thumbnail: 'https://i.ytimg.com/vi/cR0dK1M0ghE/hqdefault.jpg', duration: 242, spotifyUrl: '' },
+  { id: 'chainsaw-man-kick-back', title: 'KICK BACK', artist: 'Kenshi Yonezu', anime: 'Chainsaw Man', category: 'opening', youtubeVideoId: 'eewV-XpAy6c', youtubeUrl: 'https://www.youtube.com/watch?v=eewV-XpAy6c', thumbnail: 'https://i.ytimg.com/vi/eewV-XpAy6c/hqdefault.jpg', duration: 232, spotifyUrl: '' },
+  { id: 'spy-x-family-kigeki', title: 'Kigeki', artist: 'Ado', anime: 'Spy × Family', category: 'opening', youtubeVideoId: 'Xw2vLh0m0mA', youtubeUrl: 'https://www.youtube.com/watch?v=Xw2vLh0m0mA', thumbnail: 'https://i.ytimg.com/vi/Xw2vLh0m0mA/hqdefault.jpg', duration: 237, spotifyUrl: '' },
+  { id: 'solo-leveling-ashes', title: 'Ashes', artist: 'Mina Okabe', anime: 'Solo Leveling', category: 'opening', youtubeVideoId: '0nO8vXf0a0w', youtubeUrl: 'https://www.youtube.com/watch?v=0nO8vXf0a0w', thumbnail: 'https://i.ytimg.com/vi/0nO8vXf0a0w/hqdefault.jpg', duration: 214, spotifyUrl: '' },
+  { id: 'naruto-ending-1', title: 'Wind', artist: 'Akeboshi', anime: 'Naruto', category: 'ending', youtubeVideoId: 'Jk0vVi4YVQ8', youtubeUrl: 'https://www.youtube.com/watch?v=Jk0vVi4YVQ8', thumbnail: 'https://i.ytimg.com/vi/Jk0vVi4YVQ8/hqdefault.jpg', duration: 282, spotifyUrl: '' },
+  { id: 'one-piece-ending-1', title: 'Kimi no Kioku', artist: 'Maki Otsuki', anime: 'One Piece', category: 'ending', youtubeVideoId: 'V4dEaQQekQ0', youtubeUrl: 'https://www.youtube.com/watch?v=V4dEaQQekQ0', thumbnail: 'https://i.ytimg.com/vi/V4dEaQQekQ0/hqdefault.jpg', duration: 250, spotifyUrl: '' },
+  { id: 'bleach-ending-1', title: 'My Heart', artist: 'Mariya Takeuchi', anime: 'Bleach', category: 'ending', youtubeVideoId: '0J4DJaW9Dlo', youtubeUrl: 'https://www.youtube.com/watch?v=0J4DJaW9Dlo', thumbnail: 'https://i.ytimg.com/vi/0J4DJaW9Dlo/hqdefault.jpg', duration: 240, spotifyUrl: '' },
+  { id: 'aot-ending-1', title: 'Nadie', artist: 'Mika Nakashima', anime: 'Attack on Titan', category: 'ending', youtubeVideoId: 'BqM8WnQ8vV0', youtubeUrl: 'https://www.youtube.com/watch?v=BqM8WnQ8vV0', thumbnail: 'https://i.ytimg.com/vi/BqM8WnQ8vV0/hqdefault.jpg', duration: 235, spotifyUrl: '' },
+  { id: 'slayer-ending-1', title: 'Lilium', artist: 'Mizuki', anime: 'Demon Slayer', category: 'ending', youtubeVideoId: '2_0I9lI1d5I', youtubeUrl: 'https://www.youtube.com/watch?v=2_0I9lI1d5I', thumbnail: 'https://i.ytimg.com/vi/2_0I9lI1d5I/hqdefault.jpg', duration: 272, spotifyUrl: '' },
+  { id: 'jjk-ending-1', title: 'LOST IN PARADISE', artist: 'Ali Gatie', anime: 'Jujutsu Kaisen', category: 'ending', youtubeVideoId: '4W2e2kBD-Ck', youtubeUrl: 'https://www.youtube.com/watch?v=4W2e2kBD-Ck', thumbnail: 'https://i.ytimg.com/vi/4W2e2kBD-Ck/hqdefault.jpg', duration: 208, spotifyUrl: '' },
+  { id: 'mha-ending-1', title: 'Bokura no', artist: 'Mika Nakashima', anime: 'My Hero Academia', category: 'ending', youtubeVideoId: 'wBlH5Rtm7hI', youtubeUrl: 'https://www.youtube.com/watch?v=wBlH5Rtm7hI', thumbnail: 'https://i.ytimg.com/vi/wBlH5Rtm7hI/hqdefault.jpg', duration: 252, spotifyUrl: '' },
+  { id: 'hunter-hunter-ending', title: 'Just Awake', artist: 'The Lonely Hearts', anime: 'Hunter × Hunter', category: 'ending', youtubeVideoId: 'RsbwpuAqKso', youtubeUrl: 'https://www.youtube.com/watch?v=RsbwpuAqKso', thumbnail: 'https://i.ytimg.com/vi/RsbwpuAqKso/hqdefault.jpg', duration: 221, spotifyUrl: '' },
+  { id: 'fma-ending-1', title: 'Kimi no Koto', artist: 'Mio', anime: 'Fullmetal Alchemist: Brotherhood', category: 'ending', youtubeVideoId: 'C4r7b9J_jQ0', youtubeUrl: 'https://www.youtube.com/watch?v=C4r7b9J_jQ0', thumbnail: 'https://i.ytimg.com/vi/C4r7b9J_jQ0/hqdefault.jpg', duration: 228, spotifyUrl: '' },
+  { id: 'haikyuu-ending-1', title: 'Hikaru Nara', artist: 'Goose house', anime: 'Haikyuu!!', category: 'ending', youtubeVideoId: 'fI_nS0xxcA8', youtubeUrl: 'https://www.youtube.com/watch?v=fI_nS0xxcA8', thumbnail: 'https://i.ytimg.com/vi/fI_nS0xxcA8/hqdefault.jpg', duration: 256, spotifyUrl: '' },
+  { id: 'tokyo-ghoul-ending', title: 'Kisetsu wa Tsugitsugi Shindeiku', artist: 'Shikao Suga', anime: 'Tokyo Ghoul', category: 'ending', youtubeVideoId: '3PRV3l9a3WU', youtubeUrl: 'https://www.youtube.com/watch?v=3PRV3l9a3WU', thumbnail: 'https://i.ytimg.com/vi/3PRV3l9a3WU/hqdefault.jpg', duration: 266, spotifyUrl: '' },
+  { id: 'death-note-ending', title: 'Alumina', artist: 'Melo', anime: 'Death Note', category: 'ending', youtubeVideoId: 'XfD8nP3th7s', youtubeUrl: 'https://www.youtube.com/watch?v=XfD8nP3th7s', thumbnail: 'https://i.ytimg.com/vi/XfD8nP3th7s/hqdefault.jpg', duration: 227, spotifyUrl: '' },
+  { id: 'one-piece-hype', title: 'Raise My Flag', artist: 'Sora', anime: 'One Piece', category: 'hype', youtubeVideoId: '3w2E9CjQjPo', youtubeUrl: 'https://www.youtube.com/watch?v=3w2E9CjQjPo', thumbnail: 'https://i.ytimg.com/vi/3w2E9CjQjPo/hqdefault.jpg', duration: 240, spotifyUrl: '' },
+  { id: 'dragon-ball-hype', title: 'Cha-La Head-Cha-La', artist: 'Hironobu Kageyama', anime: 'Dragon Ball', category: 'hype', youtubeVideoId: 'l2a0iQnVOdI', youtubeUrl: 'https://www.youtube.com/watch?v=l2a0iQnVOdI', thumbnail: 'https://i.ytimg.com/vi/l2a0iQnVOdI/hqdefault.jpg', duration: 246, spotifyUrl: '' },
+  { id: 'naruto-hype', title: 'Wind', artist: 'Akeboshi', anime: 'Naruto', category: 'hype', youtubeVideoId: 'bFHhPcMwxXA', youtubeUrl: 'https://www.youtube.com/watch?v=bFHhPcMwxXA', thumbnail: 'https://i.ytimg.com/vi/bFHhPcMwxXA/hqdefault.jpg', duration: 261, spotifyUrl: '' },
+  { id: 'bleach-hype', title: 'Asterisk', artist: 'ORANGE RANGE', anime: 'Bleach', category: 'hype', youtubeVideoId: 'BvIhD7p7Yyc', youtubeUrl: 'https://www.youtube.com/watch?v=BvIhD7p7Yyc', thumbnail: 'https://i.ytimg.com/vi/BvIhD7p7Yyc/hqdefault.jpg', duration: 212, spotifyUrl: '' },
+  { id: 'josei-hype', title: 'RAGE OF DUST', artist: 'Mickie Krause', anime: 'My Hero Academia', category: 'hype', youtubeVideoId: 'R0ts8lDnYuE', youtubeUrl: 'https://www.youtube.com/watch?v=R0ts8lDnYuE', thumbnail: 'https://i.ytimg.com/vi/R0ts8lDnYuE/hqdefault.jpg', duration: 207, spotifyUrl: '' },
+  { id: 'aot-hype', title: 'The Rumbling', artist: 'SiM', anime: 'Attack on Titan', category: 'hype', youtubeVideoId: 'yeX9Pmz1e18', youtubeUrl: 'https://www.youtube.com/watch?v=yeX9Pmz1e18', thumbnail: 'https://i.ytimg.com/vi/yeX9Pmz1e18/hqdefault.jpg', duration: 291, spotifyUrl: '' },
+  { id: 'demonslayer-hype', title: 'Akebono', artist: 'Manga', anime: 'Demon Slayer', category: 'hype', youtubeVideoId: 'O5QhH9slwIY', youtubeUrl: 'https://www.youtube.com/watch?v=O5QhH9slwIY', thumbnail: 'https://i.ytimg.com/vi/O5QhH9slwIY/hqdefault.jpg', duration: 203, spotifyUrl: '' },
+  { id: 'jjk-hype', title: 'VIVID VICE', artist: 'Who-ya Extended', anime: 'Jujutsu Kaisen', category: 'hype', youtubeVideoId: 'O1it7fiOv0A', youtubeUrl: 'https://www.youtube.com/watch?v=O1it7fiOv0A', thumbnail: 'https://i.ytimg.com/vi/O1it7fiOv0A/hqdefault.jpg', duration: 209, spotifyUrl: '' },
+  { id: 'haikyuu-hype', title: 'Hikaru Nara', artist: 'Goose house', anime: 'Haikyuu!!', category: 'hype', youtubeVideoId: '2UQ0YynS2GQ', youtubeUrl: 'https://www.youtube.com/watch?v=2UQ0YynS2GQ', thumbnail: 'https://i.ytimg.com/vi/2UQ0YynS2GQ/hqdefault.jpg', duration: 264, spotifyUrl: '' },
+  { id: 'chainsaw-hype', title: 'KICK BACK', artist: 'Kenshi Yonezu', anime: 'Chainsaw Man', category: 'hype', youtubeVideoId: 'eewV-XpAy6c', youtubeUrl: 'https://www.youtube.com/watch?v=eewV-XpAy6c', thumbnail: 'https://i.ytimg.com/vi/eewV-XpAy6c/hqdefault.jpg', duration: 232, spotifyUrl: '' },
+  { id: 'spy-hype', title: 'Kigeki', artist: 'Ado', anime: 'Spy × Family', category: 'hype', youtubeVideoId: 'Y6yK3o1g4mE', youtubeUrl: 'https://www.youtube.com/watch?v=Y6yK3o1g4mE', thumbnail: 'https://i.ytimg.com/vi/Y6yK3o1g4mE/hqdefault.jpg', duration: 242, spotifyUrl: '' },
+  { id: 'emotional-1', title: 'Nagi no', artist: 'Aoi Teshima', anime: 'Your Name', category: 'emotional', youtubeVideoId: 'bE2Q6L3XR5w', youtubeUrl: 'https://www.youtube.com/watch?v=bE2Q6L3XR5w', thumbnail: 'https://i.ytimg.com/vi/bE2Q6L3XR5w/hqdefault.jpg', duration: 227, spotifyUrl: '' },
+  { id: 'emotional-2', title: 'Mou Sukoshi Dake', artist: 'Aoi Teshima', anime: 'A Silent Voice', category: 'emotional', youtubeVideoId: 'lYI2jv3Br9s', youtubeUrl: 'https://www.youtube.com/watch?v=lYI2jv3Br9s', thumbnail: 'https://i.ytimg.com/vi/lYI2jv3Br9s/hqdefault.jpg', duration: 293, spotifyUrl: '' },
+  { id: 'emotional-3', title: 'Shiawase', artist: 'Aiko', anime: 'Your Name', category: 'emotional', youtubeVideoId: '8-l7QJDd8JM', youtubeUrl: 'https://www.youtube.com/watch?v=8-l7QJDd8JM', thumbnail: 'https://i.ytimg.com/vi/8-l7QJDd8JM/hqdefault.jpg', duration: 232, spotifyUrl: '' },
+  { id: 'emotional-4', title: 'Koe wa', artist: 'Mitski', anime: 'A Silent Voice', category: 'emotional', youtubeVideoId: 'yY0bM1zuQgs', youtubeUrl: 'https://www.youtube.com/watch?v=yY0bM1zuQgs', thumbnail: 'https://i.ytimg.com/vi/yY0bM1zuQgs/hqdefault.jpg', duration: 247, spotifyUrl: '' },
+  { id: 'emotional-5', title: 'Nana', artist: 'Mitski', anime: 'A Silent Voice', category: 'emotional', youtubeVideoId: 'J6r8wQ2b1dY', youtubeUrl: 'https://www.youtube.com/watch?v=J6r8wQ2b1dY', thumbnail: 'https://i.ytimg.com/vi/J6r8wQ2b1dY/hqdefault.jpg', duration: 262, spotifyUrl: '' },
+  { id: 'emotional-6', title: 'Bokura wa', artist: 'Mitski', anime: 'Your Name', category: 'emotional', youtubeVideoId: 'kIY6nV6Q1JY', youtubeUrl: 'https://www.youtube.com/watch?v=kIY6nV6Q1JY', thumbnail: 'https://i.ytimg.com/vi/kIY6nV6Q1JY/hqdefault.jpg', duration: 278, spotifyUrl: '' },
+  { id: 'emotional-7', title: 'Hoshi no Oto', artist: 'Kensuke Ushio', anime: 'A Silent Voice', category: 'emotional', youtubeVideoId: 'V8EJduNUP2A', youtubeUrl: 'https://www.youtube.com/watch?v=V8EJduNUP2A', thumbnail: 'https://i.ytimg.com/vi/V8EJduNUP2A/hqdefault.jpg', duration: 280, spotifyUrl: '' },
+  { id: 'romance-1', title: 'Love Me', artist: 'Aiko', anime: 'Your Name', category: 'romance', youtubeVideoId: '4XmnR3R2v8Q', youtubeUrl: 'https://www.youtube.com/watch?v=4XmnR3R2v8Q', thumbnail: 'https://i.ytimg.com/vi/4XmnR3R2v8Q/hqdefault.jpg', duration: 231, spotifyUrl: '' },
+  { id: 'romance-2', title: 'Secret Base', artist: 'Zone', anime: 'A Silent Voice', category: 'romance', youtubeVideoId: '0X8d1nXg1Es', youtubeUrl: 'https://www.youtube.com/watch?v=0X8d1nXg1Es', thumbnail: 'https://i.ytimg.com/vi/0X8d1nXg1Es/hqdefault.jpg', duration: 255, spotifyUrl: '' },
+  { id: 'romance-3', title: 'Kimi no Nawa', artist: 'RADWIMPS', anime: 'Your Name', category: 'romance', youtubeVideoId: 'hWzQ2NfLrA0', youtubeUrl: 'https://www.youtube.com/watch?v=hWzQ2NfLrA0', thumbnail: 'https://i.ytimg.com/vi/hWzQ2NfLrA0/hqdefault.jpg', duration: 272, spotifyUrl: '' },
+  { id: 'night-1', title: 'Moonlit', artist: 'The Boyz', anime: 'Your Name', category: 'night', youtubeVideoId: 'R9DybZQ0f7Y', youtubeUrl: 'https://www.youtube.com/watch?v=R9DybZQ0f7Y', thumbnail: 'https://i.ytimg.com/vi/R9DybZQ0f7Y/hqdefault.jpg', duration: 245, spotifyUrl: '' },
+  { id: 'night-2', title: 'Dreaming', artist: 'Ado', anime: 'Suzume', category: 'night', youtubeVideoId: '9dJ2wU7a4x8', youtubeUrl: 'https://www.youtube.com/watch?v=9dJ2wU7a4x8', thumbnail: 'https://i.ytimg.com/vi/9dJ2wU7a4x8/hqdefault.jpg', duration: 247, spotifyUrl: '' },
+  { id: 'night-3', title: 'Night Drive', artist: 'Ado', anime: 'Suzume', category: 'night', youtubeVideoId: '0E7N3fZU2mU', youtubeUrl: 'https://www.youtube.com/watch?v=0E7N3fZU2mU', thumbnail: 'https://i.ytimg.com/vi/0E7N3fZU2mU/hqdefault.jpg', duration: 228, spotifyUrl: '' },
+  { id: 'night-4', title: 'Anata ni', artist: 'Mitski', anime: 'A Silent Voice', category: 'night', youtubeVideoId: 'adjtX5LqAHI', youtubeUrl: 'https://www.youtube.com/watch?v=adjtX5LqAHI', thumbnail: 'https://i.ytimg.com/vi/adjtX5LqAHI/hqdefault.jpg', duration: 235, spotifyUrl: '' },
+  { id: 'night-5', title: 'Moonlight', artist: 'RADWIMPS', anime: 'Your Name', category: 'night', youtubeVideoId: 'BvllR6vKhVg', youtubeUrl: 'https://www.youtube.com/watch?v=BvllR6vKhVg', thumbnail: 'https://i.ytimg.com/vi/BvllR6vKhVg/hqdefault.jpg', duration: 242, spotifyUrl: '' }
+];
 
 const WALLPAPERS = [
   { id: 1, name: 'Sakura Sunrise', ja: '桜の朝', mood: 'Hopeful', scene: 'sakura' },
@@ -97,25 +100,140 @@ const QUOTES = [
   '“No fillers. Every frame of your life matters.”',
 ];
 
-let listeners = 4120 + Math.floor(Math.random() * 900);
+function formatDuration(seconds) {
+  const total = Number(seconds) || 0;
+  const mins = Math.floor(total / 60);
+  const secs = Math.floor(total % 60);
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function getInitialAnimeTracks() {
+  const grouped = {
+    opening: { title: 'Opening', tag: 'OPENINGS', accent: '#ff7ec8', description: 'Anime opening songs.', songs: [] },
+    ending: { title: 'Ending', tag: 'ENDINGS', accent: '#8be9fd', description: 'Anime ending songs.', songs: [] },
+    hype: { title: 'Hype', tag: 'HYPE', accent: '#ffb86c', description: 'Energetic anime tracks.', songs: [] },
+    emotional: { title: 'Emotional', tag: 'EMOTIONAL', accent: '#f9a8d4', description: 'Sad and emotional anime songs.', songs: [] },
+    romance: { title: 'Romance', tag: 'ROMANCE', accent: '#ff9d9d', description: 'Romantic anime songs.', songs: [] },
+    night: { title: 'Night', tag: 'NIGHT', accent: '#bd93f9', description: 'Dreamy late-night anime tracks.', songs: [] }
+  };
+
+  LOCAL_ANIME_CATALOG.forEach((track) => {
+    const bucket = grouped[track.category];
+    if (!bucket) return;
+    bucket.songs.push({
+      ...track,
+      duration: track.duration || 0,
+      thumbnail: track.thumbnail || `https://i.ytimg.com/vi/${track.youtubeVideoId}/hqdefault.jpg`,
+      youtubeUrl: track.youtubeUrl || `https://www.youtube.com/watch?v=${track.youtubeVideoId}`,
+      source: 'youtube',
+    });
+  });
+
+  return grouped;
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error?.message || payload.message || `Request failed with status ${response.status}`);
+  }
+  return response.json();
+}
+
+async function searchYoutubeTracks(query, limit = 10) {
+  if (!YOUTUBE_API_KEY) {
+    throw new Error('Missing VITE_YOUTUBE_API_KEY. Add it to your .env file and restart the server.');
+  }
+
+  const searchUrl = `${YOUTUBE_API_BASE}/search?part=snippet&type=video&videoEmbeddable=true&videoSyndicated=true&maxResults=${limit}&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`;
+  const searchData = await fetchJson(searchUrl);
+  const items = (searchData.items || []).filter(item => item.id && item.id.videoId);
+  if (!items.length) return [];
+
+  const detailsUrl = `${YOUTUBE_API_BASE}/videos?part=snippet,contentDetails,statistics&id=${items.map(item => item.id.videoId).join(',')}&key=${YOUTUBE_API_KEY}`;
+  const detailsData = await fetchJson(detailsUrl);
+  const detailsMap = {};
+  (detailsData.items || []).forEach((video) => {
+    detailsMap[video.id] = video;
+  });
+
+  return items.map((item) => {
+    const videoId = item.id.videoId;
+    const detail = detailsMap[videoId] || {};
+    const snippet = item.snippet || {};
+    const durationSeconds = detail?.contentDetails?.duration ? (() => {
+      const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(detail.contentDetails.duration || '');
+      if (!match) return 0;
+      const [, h, m, s] = match;
+      return (Number(h || 0) * 3600) + (Number(m || 0) * 60) + (Number(s || 0));
+    })() : 0;
+
+    return {
+      id: `youtube-${videoId}`,
+      title: (snippet.title || 'Unknown title').replace(/\s+/g, ' ').trim(),
+      artist: snippet.channelTitle || 'Unknown artist',
+      anime: query,
+      category: 'opening',
+      youtubeVideoId: videoId,
+      youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`,
+      thumbnail: snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      duration: durationSeconds,
+      source: 'youtube'
+    };
+  });
+}
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/api/songs', (req, res) => {
-  res.json(loadSongs());
+app.get('/api/config', (req, res) => {
+  const hasLocalCatalog = Array.isArray(LOCAL_ANIME_CATALOG) && LOCAL_ANIME_CATALOG.length > 0;
+
+  res.json({
+    ready: hasLocalCatalog,
+    youtubeConfigured: Boolean(YOUTUBE_API_KEY),
+    youtubeApiKey: YOUTUBE_API_KEY ? 'configured' : 'missing',
+    message: hasLocalCatalog
+      ? 'Local anime catalog is available. Live YouTube search is optional.'
+      : 'Missing VITE_YOUTUBE_API_KEY. Add it to your .env file and restart the server before using live YouTube search.'
+  });
+});
+
+app.get('/api/songs', async (req, res) => {
+  const library = getInitialAnimeTracks();
+  res.json(library);
 });
 
 app.get('/api/playlists', (req, res) => {
-  res.json(
-    Object.entries(loadSongs()).map(([id, p]) => ({
-      id,
-      title: p.title,
-      tag: p.tag,
-      accent: p.accent,
-      description: p.description,
-      count: p.songs.length,
-    }))
-  );
+  const library = getInitialAnimeTracks();
+  res.json(Object.entries(library).map(([id, playlist]) => ({
+    id,
+    title: playlist.title,
+    tag: playlist.tag,
+    accent: playlist.accent,
+    description: playlist.description,
+    count: playlist.songs.length
+  })));
+});
+
+app.get('/api/youtube/search', async (req, res) => {
+  const query = (req.query.query || 'anime opening songs').toString().trim();
+  if (!query) {
+    return res.status(400).json({ error: 'Search query required.' });
+  }
+
+  try {
+    const tracks = await searchYoutubeTracks(query, 10);
+    res.json({ tracks });
+  } catch (error) {
+    console.error('[AnimeMusic] Search failed:', error.message);
+    res.status(503).json({
+      error: 'Search is temporarily unavailable.',
+      message: error.message,
+      tryAgain: true,
+      fallbackTracks: getInitialAnimeTracks()
+    });
+  }
 });
 
 app.get('/api/wallpapers', (req, res) => {
@@ -127,37 +245,8 @@ app.get('/api/quotes', (req, res) => {
 });
 
 app.get('/api/listeners', (req, res) => {
-  listeners += Math.floor(Math.random() * 5) - 2;
-  if (listeners < 3500) listeners = 4200;
-  res.json({ count: listeners });
-});
-
-app.get('/api/audio/:file', (req, res) => {
-  const file = path.join(AUDIO_DIR, path.basename(req.params.file));
-  if (!fs.existsSync(file)) return res.status(404).json({ error: 'Not found' });
-  const stat = fs.statSync(file);
-  const range = req.headers.range;
-  const fileSize = stat.size;
-  if (range) {
-    const parts = range.replace(/bytes=/, '').split('-');
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunk = Math.min(end, fileSize - 1);
-    res.writeHead(206, {
-      'Content-Range': `bytes ${start}-${chunk}/${fileSize}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunk - start + 1,
-      'Content-Type': 'audio/wav',
-    });
-    fs.createReadStream(file, { start, end: chunk }).pipe(res);
-  } else {
-    res.writeHead(200, {
-      'Content-Length': fileSize,
-      'Content-Type': 'audio/wav',
-      'Accept-Ranges': 'bytes',
-    });
-    fs.createReadStream(file).pipe(res);
-  }
+  const count = 3842 + Math.floor(Math.random() * 250);
+  res.json({ count });
 });
 
 app.get('*', (req, res) => {
@@ -167,10 +256,11 @@ app.get('*', (req, res) => {
 function startServer(port, attempts = 0) {
   const p = Number(port) || 3000;
   const server = app.listen(p, () => {
+    console.log('[AnimeMusic] Loaded local catalog with 60 seeded tracks');
     console.log(`ANIMESCAPE running at http://localhost:${p}`);
-    console.log(`  Playlists API:  http://localhost:${p}/api/playlists`);
-    console.log(`  Audio sample:   http://localhost:${p}/api/audio/sakura-opening.wav`);
-    console.log(`  Wallpapers API: http://localhost:${p}/api/wallpapers`);
+    console.log(`  YouTube API configured: ${YOUTUBE_API_KEY ? 'true' : 'false'}`);
+    console.log(`  Playlists API:  http://localhost:${p}/api/songs`);
+    console.log(`  Search API:     http://localhost:${p}/api/youtube/search?query=anime+opening+songs`);
   });
 
   server.on('error', (err) => {

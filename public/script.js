@@ -7,7 +7,9 @@
   const weatherButtons = $$('.weather-btn');
   const playlistPanel = $('#playlistPanel');
   const trackList = $('#trackList');
-  const audio = $('#audio');
+  const trackSearch = $('#trackSearch');
+  const searchBtn = $('#searchBtn');
+  const playlistStatus = $('#playlistStatus');
   const playBtn = $('#playBtn');
   const npTitle = $('#npTitle');
   const npArtist = $('#npArtist');
@@ -16,23 +18,33 @@
   const npDur = $('#npDur');
   const listenerCount = $('#listenerCount');
   const playlistCloseBtn = $('[data-action="playlist-close"]');
+  const playerThumb = $('.player-thumb');
+  const openSpotifyBtn = $('#openSpotifyBtn');
+  const openYoutubeBtn = $('#openYoutubeBtn');
+  const volumeBtn = $('#volumeBtn');
 
-  let playlists = {};
-  let songCatalog = [];
-  let currentKey = null;
-  let currentIndex = 0;
-  let currentMode = 'snow';
-  let currentTrackRow = null;
-  let playlistOpen = false;
-  let currentFile = '';
-
-  const FX = {
-    snow: [],
-    rain: [],
-    sakura: [],
-    sparkles: [],
+  const state = {
+    playlists: {},
+    songCatalog: [],
+    currentPlaylist: [],
+    currentIndex: 0,
+    currentTrack: null,
+    currentKey: null,
+    currentMode: 'snow',
+    playlistOpen: false,
+    isPlaying: false,
+    volume: 100,
+    muted: false,
+    provider: 'youtube',
+    searchCache: new Map(),
+    lastSearch: '',
+    playerReady: false,
+    ytPlayer: null,
+    progressTimer: null,
+    currentVideoId: null,
   };
 
+  const FX = { snow: [], rain: [], sakura: [], sparkles: [] };
   const canvas = document.createElement('canvas');
   canvas.className = 'weather-fx';
   document.body.appendChild(canvas);
@@ -69,15 +81,15 @@
 
   function tickFx() {
     ctx.clearRect(0, 0, W, H);
-    if (currentMode === 'clear') {
+    if (state.currentMode === 'clear') {
       requestAnimationFrame(tickFx);
       return;
     }
 
-    const list = FX[currentMode];
+    const list = FX[state.currentMode];
     for (let i = list.length - 1; i >= 0; i--) {
       const p = list[i];
-      if (currentMode === 'snow') {
+      if (state.currentMode === 'snow') {
         p.ph += .02;
         p.y += p.s;
         p.x += Math.sin(p.ph) * p.drift;
@@ -85,7 +97,7 @@
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fill();
-      } else if (currentMode === 'rain') {
+      } else if (state.currentMode === 'rain') {
         p.y += p.s;
         p.x += 1.1;
         ctx.strokeStyle = 'rgba(130, 190, 255, .5)';
@@ -93,7 +105,7 @@
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(p.x - 4, p.y - p.l);
         ctx.stroke();
-      } else if (currentMode === 'sakura') {
+      } else if (state.currentMode === 'sakura') {
         p.ph += .02;
         p.rot += p.spin;
         p.y += p.s;
@@ -106,7 +118,7 @@
         ctx.arc(0, 0, p.r, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
-      } else if (currentMode === 'sparkles') {
+      } else if (state.currentMode === 'sparkles') {
         p.ph += .03;
         const alpha = (Math.sin(p.ph) + 1) / 2;
         ctx.fillStyle = `rgba(255, 221, 170, ${.2 + alpha * .55})`;
@@ -117,28 +129,28 @@
 
       if (p.y > H + 30 || p.x > W + 30) {
         list.splice(i, 1);
-        spawn(currentMode);
+        spawn(state.currentMode);
       }
     }
 
-    while (list.length < COUNT[currentMode]) spawn(currentMode);
+    while (list.length < COUNT[state.currentMode]) spawn(state.currentMode);
     requestAnimationFrame(tickFx);
   }
 
   function setWeather(mode) {
-    currentMode = mode;
+    state.currentMode = mode;
     weatherButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.fx === mode));
   }
 
   function setPlaylistOpen(open) {
-    playlistOpen = open;
+    state.playlistOpen = open;
     playlistPanel.classList.toggle('open', open);
     playlistPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = open ? 'hidden' : '';
   }
 
   function togglePlaylist() {
-    setPlaylistOpen(!playlistOpen);
+    setPlaylistOpen(!state.playlistOpen);
   }
 
   async function loadListeners() {
@@ -147,77 +159,87 @@
       const data = await response.json();
       listenerCount.textContent = Number(data.count || 0).toLocaleString();
     } catch {
-      // Leave the last known value on screen if the request fails.
+      // Ignore listener errors silently.
     }
   }
 
-  function fmt(time) {
-    return `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
+  function formatTime(value) {
+    const total = Number(value) || 0;
+    const minutes = Math.floor(total / 60);
+    const seconds = Math.floor(total % 60);
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
   }
 
-  function updateProgress() {
-    if (!audio.duration || Number.isNaN(audio.duration)) return;
-    npFill.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
-    npCur.textContent = fmt(audio.currentTime);
-    npDur.textContent = fmt(audio.duration);
+  function normalizeTrack(raw, fallbackKey = '') {
+    if (!raw || !raw.title) return null;
+    const youtubeVideoId = raw.youtubeVideoId || raw.youtubeVideoId || raw.id || '';
+    const duration = Number(raw.duration);
+    return {
+      id: raw.id || `track-${raw.youtubeVideoId || raw.spotifyTrackId || Math.random().toString(36).slice(2)}`,
+      title: raw.title,
+      artist: raw.artist || raw.channelTitle || 'Unknown artist',
+      album: raw.album || raw.anime || 'Anime track',
+      thumbnail: raw.thumbnail || 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=600&q=80',
+      duration: Number.isFinite(duration) ? duration : 0,
+      source: raw.source || 'youtube',
+      youtubeVideoId: raw.youtubeVideoId || youtubeVideoId,
+      youtubeUrl: raw.youtubeUrl || (youtubeVideoId ? `https://www.youtube.com/watch?v=${youtubeVideoId}` : ''),
+      spotifyTrackId: raw.spotifyTrackId || '',
+      spotifyUrl: raw.spotifyUrl || '',
+      anime: raw.anime || fallbackKey || 'Anime track',
+      playlistKey: raw.playlistKey || fallbackKey,
+    };
   }
 
-  async function loadPlaylists() {
-    const response = await fetch('/api/songs');
-    playlists = await response.json();
-    const firstKey = Object.keys(playlists)[0];
-    if (!firstKey) return;
-
-    songCatalog = getAllSongs();
-    renderTracks(firstKey);
-    const firstSong = songCatalog[0] || playlists[firstKey]?.songs?.[0];
-    if (firstSong) {
-      npTitle.textContent = firstSong.title;
-      npArtist.textContent = firstSong.artist;
-    }
-  }
-
-  function getAllSongs() {
-    const seen = new Set();
-    const songs = [];
-    Object.entries(playlists).forEach(([playlistKey, playlist]) => {
-      playlist.songs.forEach(song => {
-        if (seen.has(song.file)) return;
-        seen.add(song.file);
-        songs.push({ ...song, playlistKey });
+  function flattenTracks(playlists) {
+    const combined = [];
+    Object.entries(playlists || {}).forEach(([playlistKey, playlist]) => {
+      (playlist?.songs || []).forEach(song => {
+        const normalized = normalizeTrack({ ...song, playlistKey }, playlistKey);
+        if (normalized) combined.push(normalized);
       });
     });
-    return songs;
+    return combined;
   }
 
-  function renderTracks(key) {
-    const playlist = playlists[key];
-    if (!playlist) return;
+  function setStatus(message, type = 'info', shouldRetry = false) {
+    if (!playlistStatus) return;
+    const buttonMarkup = shouldRetry ? '<button class="status-retry" data-retry="true">Try again</button>' : '';
+    playlistStatus.innerHTML = `${message}${buttonMarkup}`;
+    playlistStatus.dataset.type = type;
+  }
 
-    currentKey = key;
-    songCatalog = getAllSongs();
-    trackList.innerHTML = songCatalog.map((song, index) => `
-      <article class="track-item ${song.file === currentFile ? 'active' : ''}" data-index="${index}" data-file="${song.file}" data-title="${song.title}" data-playlist="${song.playlistKey}">
+  function renderSkeleton(count = 3) {
+    trackList.innerHTML = Array.from({ length: count }, (_, index) => `
+      <article class="track-item" aria-label="Loading track ${index + 1}">
         <div class="track-num">${String(index + 1).padStart(2, '0')}</div>
+        <div class="track-thumb skeleton" style="background:rgba(255,255,255,.08);"></div>
         <div class="track-info">
-          <strong>${song.title}</strong>
-          <span>${song.artist}</span>
+          <strong style="background:rgba(255,255,255,.08);border-radius:999px;height:12px;display:block;width:70%;"></strong>
+          <span style="background:rgba(255,255,255,.08);border-radius:999px;height:10px;display:block;width:50%;margin-top:4px;"></span>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span class="track-dur">${song.duration}</span>
-          <button class="track-play" aria-label="Play ${song.title}">▶</button>
+        <div class="track-actions">
+          <span class="track-dur">--:--</span>
+          <button class="track-play" aria-label="Loading">▶</button>
         </div>
       </article>
     `).join('');
+  }
 
-    $$('.track-item', trackList).forEach(item => {
-      const play = () => playTrack(item.dataset.file, item.dataset.title, item.dataset.playlist, Number(item.dataset.index), item);
-      item.addEventListener('click', play);
-      $('.track-play', item).addEventListener('click', e => {
-        e.stopPropagation();
-        play();
-      });
-    });
+  function updatePlayerMeta(track) {
+    if (!track) return;
+    npTitle.textContent = track.title || 'Select a track';
+    npArtist.textContent = track.artist || 'Anime music';
+    if (playerThumb) {
+      playerThumb.style.backgroundImage = `url(${track.thumbnail})`;
+      playerThumb.style.backgroundSize = 'cover';
+      playerThumb.style.backgroundPosition = 'center';
+    }
+    if (track.duration) {
+      npDur.textContent = formatTime(track.duration);
+    }
+    npCur.textContent = '0:00';
+    npFill.style.width = '0%';
   }
 
   function setActiveRow(row) {
@@ -225,101 +247,376 @@
     if (row) row.classList.add('active');
   }
 
-  function playTrack(file, title, key, index, row) {
-    currentKey = key;
-    currentIndex = index;
-    currentTrackRow = row;
-    currentFile = file;
-    audio.src = `/api/audio/${file}`;
-    npTitle.textContent = title;
-    npArtist.textContent = 'ANIMESCAPE';
+  function renderTrackList(tracks) {
+    if (!tracks.length) {
+      trackList.innerHTML = '<div class="track-item"><div class="track-info"><strong>No real songs found</strong><span>Try a different anime search.</span></div></div>';
+      return;
+    }
+
+    trackList.innerHTML = tracks.map((track, index) => `
+      <article class="track-item ${track.id === state.currentTrack?.id ? 'active' : ''}" data-index="${index}" data-track-id="${track.id}">
+        <div class="track-num">${String(index + 1).padStart(2, '0')}</div>
+        <img class="track-thumb" src="${track.thumbnail}" alt="${track.title}" />
+        <div class="track-info">
+          <strong>${track.title}</strong>
+          <span>${track.artist}</span>
+        </div>
+        <div class="track-actions">
+          <span class="track-dur">${track.duration ? formatTime(track.duration) : '--:--'}</span>
+          <span class="equalizer" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </span>
+          <button class="track-play" aria-label="Play ${track.title}">▶</button>
+        </div>
+      </article>
+    `).join('');
+
+    $$('.track-item', trackList).forEach(item => {
+      const trackId = item.dataset.trackId;
+      const track = tracks.find(song => song.id === trackId) || state.currentTrack;
+      const play = () => playTrackFromList(track, Number(item.dataset.index), tracks);
+      item.addEventListener('click', play);
+      const button = $('.track-play', item);
+      if (button) {
+        button.addEventListener('click', e => {
+          e.stopPropagation();
+          play();
+        });
+      }
+    });
+  }
+
+  function setCurrentTrack(track, index, playlist) {
+    state.currentTrack = track;
+    state.currentIndex = index;
+    if (playlist) state.currentPlaylist = playlist;
+    updatePlayerMeta(track);
+    const row = $(`.track-item[data-track-id="${track.id}"]`, trackList);
     setActiveRow(row);
-    audio.play().then(() => {
-      playBtn.textContent = '❚❚';
-    }).catch(() => {});
   }
 
-  function nextTrack() {
-    if (!songCatalog.length) return;
-    const nextIndex = (currentIndex + 1) % songCatalog.length;
-    const nextSong = songCatalog[nextIndex];
-    playTrack(nextSong.file, nextSong.title, nextSong.playlistKey, nextIndex, $$('.track-item', trackList)[nextIndex]);
+  function ensureYouTubeApi(callback) {
+    if (window.YT && window.YT.Player) {
+      callback();
+      return;
+    }
+
+    if (!document.getElementById('youtube-iframe-api')) {
+      const tag = document.createElement('script');
+      tag.id = 'youtube-iframe-api';
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.body.appendChild(tag);
+    }
+
+    const ready = () => {
+      if (window.YT && window.YT.Player) callback();
+    };
+    window.onYouTubeIframeAPIReady = ready;
+    setTimeout(() => {
+      if (window.YT && window.YT.Player) callback();
+    }, 1000);
   }
 
-  function prevTrack() {
-    if (!songCatalog.length) return;
-    const nextIndex = (currentIndex - 1 + songCatalog.length) % songCatalog.length;
-    const nextSong = songCatalog[nextIndex];
-    playTrack(nextSong.file, nextSong.title, nextSong.playlistKey, nextIndex, $$('.track-item', trackList)[nextIndex]);
+  function createYouTubePlayer() {
+    if (!state.ytPlayer && window.YT && window.YT.Player) {
+      state.ytPlayer = new YT.Player('youtubePlayer', {
+        height: '1',
+        width: '1',
+        videoId: '',
+        playerVars: {
+          autoplay: 0,
+          controls: 1,
+          playsinline: 1,
+          rel: 0,
+          modestbranding: 1,
+          origin: window.location.origin,
+        },
+        events: {
+          onReady: (event) => {
+            state.playerReady = true;
+            event.target.setVolume(state.muted ? 0 : state.volume);
+          },
+          onStateChange: (event) => {
+            if (event.data === YT.PlayerState.PLAYING) {
+              state.isPlaying = true;
+              playBtn.textContent = '❚❚';
+            } else if (event.data === YT.PlayerState.PAUSED) {
+              state.isPlaying = false;
+              playBtn.textContent = '▶';
+            } else if (event.data === YT.PlayerState.ENDED) {
+              advanceTrack(1);
+            }
+          },
+          onError: () => {
+            setStatus('This track could not be embedded. Trying the next valid result.', 'error');
+            advanceTrack(1);
+          },
+        }
+      });
+    }
   }
 
-  $$('[data-action]').forEach(button => {
-    button.addEventListener('click', () => {
-      const action = button.dataset.action;
-      if (action === 'playlist-toggle') togglePlaylist();
-      if (action === 'playlist-close') setPlaylistOpen(false);
-      if (action === 'play-first') {
-        const firstKey = Object.keys(playlists)[0];
-        const firstSong = playlists[firstKey]?.songs?.[0];
-        if (firstKey && firstSong) {
-          renderTracks(firstKey);
-          playTrack(firstSong.file, firstSong.title, firstKey, 0, $$('.track-item', trackList)[0]);
+  function applyVolume() {
+    if (state.ytPlayer && typeof state.ytPlayer.setVolume === 'function') {
+      state.ytPlayer.setVolume(state.muted ? 0 : state.volume);
+      state.ytPlayer.mute();
+      if (!state.muted) state.ytPlayer.unMute();
+    }
+  }
+
+  function playTrackFromList(track, index, playlist = []) {
+    if (!track) return;
+    state.currentPlaylist = playlist.length ? playlist : state.songCatalog;
+    const safeIndex = Number.isInteger(index) ? index : state.currentPlaylist.findIndex(item => item.id === track.id);
+    state.currentIndex = safeIndex >= 0 ? safeIndex : 0;
+    setCurrentTrack(track, state.currentIndex, state.currentPlaylist);
+
+    if (!track.youtubeVideoId) {
+      setStatus('This result is missing a playable YouTube ID.', 'error');
+      return;
+    }
+
+    ensureYouTubeApi(() => {
+      createYouTubePlayer();
+      if (state.ytPlayer && typeof state.ytPlayer.loadVideoById === 'function') {
+        state.ytPlayer.loadVideoById(track.youtubeVideoId);
+        state.currentVideoId = track.youtubeVideoId;
+        applyVolume();
+        state.provider = 'youtube';
+        setStatus(`Now playing: ${track.title}`, 'info');
+        setTimeout(() => {
+          if (state.ytPlayer && typeof state.ytPlayer.playVideo === 'function') {
+            state.ytPlayer.playVideo();
+          }
+        }, 250);
+      }
+    });
+  }
+
+  function advanceTrack(direction) {
+    const playlist = state.currentPlaylist.length ? state.currentPlaylist : state.songCatalog;
+    if (!playlist.length) return;
+    const nextIndex = (state.currentIndex + direction + playlist.length) % playlist.length;
+    const nextTrack = playlist[nextIndex];
+    if (nextTrack) {
+      playTrackFromList(nextTrack, nextIndex, playlist);
+    }
+  }
+
+  function updateProgressBar() {
+    if (!state.ytPlayer || typeof state.ytPlayer.getCurrentTime !== 'function') {
+      npFill.style.width = '0%';
+      return;
+    }
+    const currentTime = Number(state.ytPlayer.getCurrentTime()) || 0;
+    const duration = Number(state.ytPlayer.getDuration()) || 0;
+    if (!duration) return;
+    npCur.textContent = formatTime(currentTime);
+    npDur.textContent = formatTime(duration);
+    npFill.style.width = `${(currentTime / duration) * 100}%`;
+  }
+
+  function runSearch(query) {
+    const clean = query.trim();
+    if (!clean) return;
+    if (state.searchCache.has(clean.toLowerCase())) {
+      const cached = state.searchCache.get(clean.toLowerCase());
+      state.currentPlaylist = cached;
+      state.songCatalog = cached;
+      renderTrackList(cached);
+      setStatus(`Showing results for “${clean}”`, 'info');
+      return;
+    }
+
+    renderSkeleton(3);
+    setStatus('Loading song results...', 'info');
+
+    fetch(`/api/youtube/search?query=${encodeURIComponent(clean)}`)
+      .then(async response => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.message || payload.error || 'Could not reach the music library.');
+        let results = (payload.tracks || []).map(track => normalizeTrack(track));
+        results = results.filter(Boolean);
+        if (!results.length) {
+          setStatus('No matching anime tracks were found for that search.', 'error');
+          trackList.innerHTML = '<div class="track-item"><div class="track-info"><strong>No results</strong><span>Try “One Piece opening” or “anime ending songs”.</span></div></div>';
+          return;
+        }
+
+        const unique = [];
+        const seen = new Set();
+        results.forEach(track => {
+          if (!track.youtubeVideoId || seen.has(track.youtubeVideoId)) return;
+          seen.add(track.youtubeVideoId);
+          unique.push(track);
+        });
+
+        state.searchCache.set(clean.toLowerCase(), unique);
+        state.songCatalog = unique;
+        state.currentPlaylist = unique;
+        renderTrackList(unique);
+        setStatus(`Showing ${unique.length} real results for “${clean}”`, 'info');
+        if (unique[0]) {
+          state.currentTrack = unique[0];
+          updatePlayerMeta(unique[0]);
+        }
+      })
+      .catch(error => {
+        console.error(error);
+        setStatus("Couldn't reach the music library.", 'error', true);
+        trackList.innerHTML = '<div class="track-item"><div class="track-info"><strong>Could not load songs</strong><span>Check the API key configuration.</span></div></div>';
+      });
+  }
+
+  async function loadPlaylists() {
+    try {
+      setStatus('Loading real anime tracks...', 'info');
+      renderSkeleton(3);
+      const response = await fetch('/api/config');
+      const config = await response.json();
+
+      if (!config.ready) {
+        setStatus('YouTube search is optional; loading the local anime catalog instead.', 'info');
+      }
+
+      const songsResponse = await fetch('/api/songs');
+      if (!songsResponse.ok) {
+        const payload = await songsResponse.json().catch(() => ({}));
+        throw new Error(payload.error || 'Could not reach the music library.');
+      }
+
+      const playlists = await songsResponse.json();
+      state.playlists = playlists;
+      const flattened = flattenTracks(playlists);
+      state.songCatalog = flattened;
+      state.currentPlaylist = flattened;
+
+      if (!flattened.length) {
+        setStatus('No real anime tracks are available right now.', 'error');
+        trackList.innerHTML = '<div class="track-item"><div class="track-info"><strong>No songs available</strong><span>Use search to find real YouTube results.</span></div></div>';
+        return;
+      }
+
+      renderTrackList(flattened);
+      setStatus('Real anime music loaded.', 'info');
+      if (flattened[0]) {
+        setCurrentTrack(flattened[0], 0, flattened);
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus("Couldn't reach the music library.", 'error', true);
+      trackList.innerHTML = '<div class="track-item"><div class="track-info"><strong>Could not load songs</strong><span>Check the YouTube API key.</span></div></div>';
+    }
+  }
+
+  function attachEvents() {
+    weatherButtons.forEach(button => {
+      button.addEventListener('click', () => setWeather(button.dataset.fx));
+    });
+
+    const toggleButton = $('[data-action="playlist-toggle"]');
+    if (toggleButton) toggleButton.addEventListener('click', togglePlaylist);
+    if (playlistCloseBtn) playlistCloseBtn.addEventListener('click', () => setPlaylistOpen(false));
+
+    $('#prevBtn').addEventListener('click', () => advanceTrack(-1));
+    $('#nextBtn').addEventListener('click', () => advanceTrack(1));
+    $('#shuffleBtn').addEventListener('click', () => {
+      if (!state.songCatalog.length) return;
+      const randomIndex = Math.floor(Math.random() * state.songCatalog.length);
+      const randomTrack = state.songCatalog[randomIndex];
+      playTrackFromList(randomTrack, randomIndex, state.songCatalog);
+    });
+    $('#repeatBtn').addEventListener('click', () => {
+      if (state.ytPlayer && typeof state.ytPlayer.seekTo === 'function') {
+        state.ytPlayer.seekTo(0, true);
+      }
+    });
+    playBtn.addEventListener('click', () => {
+      if (!state.currentTrack && state.songCatalog.length) {
+        playTrackFromList(state.songCatalog[0], 0, state.songCatalog);
+        return;
+      }
+      if (!state.ytPlayer) {
+        if (state.currentTrack) playTrackFromList(state.currentTrack, state.currentIndex, state.currentPlaylist);
+        return;
+      }
+      if (state.isPlaying) {
+        state.ytPlayer.pauseVideo();
+        state.isPlaying = false;
+        playBtn.textContent = '▶';
+      } else {
+        state.ytPlayer.playVideo();
+        state.isPlaying = true;
+        playBtn.textContent = '❚❚';
+      }
+    });
+
+    volumeBtn.addEventListener('click', () => {
+      state.muted = !state.muted;
+      applyVolume();
+      volumeBtn.textContent = state.muted ? '🔇' : '♪';
+    });
+
+    if (openSpotifyBtn) {
+      openSpotifyBtn.addEventListener('click', () => {
+        if (!state.currentTrack?.spotifyUrl) return;
+        window.open(state.currentTrack.spotifyUrl, '_blank', 'noopener,noreferrer');
+      });
+    }
+
+    if (openYoutubeBtn) {
+      openYoutubeBtn.addEventListener('click', () => {
+        if (!state.currentTrack?.youtubeUrl) return;
+        window.open(state.currentTrack.youtubeUrl, '_blank', 'noopener,noreferrer');
+      });
+    }
+
+    trackSearch.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        runSearch(trackSearch.value);
+      }
+    });
+
+    searchBtn.addEventListener('click', () => runSearch(trackSearch.value));
+
+    playlistStatus.addEventListener('click', event => {
+      const target = event.target.closest('[data-retry="true"]');
+      if (target) {
+        if (trackSearch.value.trim()) {
+          runSearch(trackSearch.value);
+        } else {
+          loadPlaylists();
         }
       }
     });
-  });
-
-  weatherButtons.forEach(button => {
-    button.addEventListener('click', () => setWeather(button.dataset.fx));
-  });
-
-  if (playlistCloseBtn) {
-    playlistCloseBtn.addEventListener('click', () => setPlaylistOpen(false));
   }
 
-  resize();
-  window.addEventListener('resize', resize);
-  tickFx();
+  function startProgressLoop() {
+    clearInterval(state.progressTimer);
+    state.progressTimer = setInterval(() => {
+      if (state.ytPlayer && state.provider === 'youtube') {
+        updateProgressBar();
+      }
+    }, 250);
+  }
 
-  loadListeners();
-  window.setInterval(loadListeners, 5000);
+  function init() {
+    resize();
+    window.addEventListener('resize', resize);
+    tickFx();
+    attachEvents();
+    startProgressLoop();
+    loadListeners();
+    window.setInterval(loadListeners, 5000);
+    setPlaylistOpen(false);
+    updatePlayerMeta({
+      title: 'Main Character FM',
+      artist: 'Anime openings',
+      thumbnail: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=800&q=80',
+      duration: 0,
+    });
+    loadPlaylists();
+  }
 
-  $('#prevBtn').addEventListener('click', prevTrack);
-  $('#nextBtn').addEventListener('click', nextTrack);
-  $('#shuffleBtn').addEventListener('click', () => {
-    if (!songCatalog.length) return;
-    const nextIndex = Math.floor(Math.random() * songCatalog.length);
-    const nextSong = songCatalog[nextIndex];
-    playTrack(nextSong.file, nextSong.title, nextSong.playlistKey, nextIndex, $$('.track-item', trackList)[nextIndex]);
-  });
-  $('#repeatBtn').addEventListener('click', () => {
-    if (audio.src) audio.currentTime = 0;
-  });
-  playBtn.addEventListener('click', () => {
-    if (!audio.src) {
-      const firstKey = Object.keys(playlists)[0];
-      const firstSong = playlists[firstKey]?.songs?.[0];
-      if (firstKey && firstSong) playTrack(firstSong.file, firstSong.title, firstKey, 0, $$('.track-item', trackList)[0]);
-      return;
-    }
-    if (audio.paused) {
-      audio.play();
-      playBtn.textContent = '❚❚';
-    } else {
-      audio.pause();
-      playBtn.textContent = '▶';
-    }
-  });
-
-  audio.addEventListener('play', () => { playBtn.textContent = '❚❚'; });
-  audio.addEventListener('pause', () => { playBtn.textContent = '▶'; });
-  audio.addEventListener('ended', nextTrack);
-  audio.addEventListener('timeupdate', updateProgress);
-  audio.addEventListener('loadedmetadata', updateProgress);
-
-  loadPlaylists().catch(() => {
-    trackList.innerHTML = '<div class="track-item"><div class="track-info"><strong>Could not load songs</strong><span>Check the server</span></div></div>';
-  });
-
-  setPlaylistOpen(false);
+  init();
 })();

@@ -79,7 +79,9 @@
 
         <div class="player-side">
           <button id="npHeart" class="side-btn" aria-label="Like">♥</button>
-          <button class="side-btn" aria-label="Volume">♪</button>
+          <button id="openSpotifyBtn" class="side-btn" aria-label="Open in Spotify">◉</button>
+          <button id="openYoutubeBtn" class="side-btn" aria-label="Watch on YouTube">▶</button>
+          <button id="volumeBtn" class="side-btn" aria-label="Volume">♪</button>
         </div>
       </section>
 
@@ -91,10 +93,24 @@
           </div>
           <button class="close-btn" data-action="playlist-close" aria-label="Close playlist">×</button>
         </div>
+
+        <div class="playlist-tools">
+          <div class="playlist-search-wrap">
+            <label class="playlist-search" for="trackSearch">
+              <span>Search</span>
+              <input id="trackSearch" type="text" placeholder="Anime opening, Jujutsu Kaisen..." />
+            </label>
+            <button id="searchBtn" class="ghost-btn mini-search">Search</button>
+          </div>
+        </div>
+
+        <div id="playlistStatus" class="playlist-status">Loading real anime tracks...</div>
         <div class="playlist-list" id="trackList"></div>
       </section>
     </main>
   </div>
+
+  <div id="youtubePlayer" aria-hidden="true"></div>
 
   <a class="instagram-follow glass-card" href="https://www.instagram.com/rupsha.py/" target="_blank" rel="noreferrer">
     <span class="instagram-mark">⌁</span>
