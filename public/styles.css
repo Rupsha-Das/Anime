@@ -409,8 +409,8 @@ button { font-family: inherit; cursor: pointer; }
   left: 50%;
   bottom: 90px;
   transform: translateX(-50%) translateY(16px);
-  width: min(1280px, calc(100% - 20px));
-  max-height: min(84vh, 780px);
+  width: min(820px, calc(100% - 20px));
+  max-height: min(82vh, 780px);
   padding: 14px 16px 12px;
   border-radius: 28px;
   display: grid;
@@ -505,9 +505,9 @@ button { font-family: inherit; cursor: pointer; }
   overflow: auto;
   display: grid;
   gap: 6px;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   align-content: start;
-  max-height: calc(84vh - 140px);
+  max-height: calc(82vh - 140px);
 }
 
 .weather-fx {
@@ -556,15 +556,15 @@ button { font-family: inherit; cursor: pointer; }
 
 .track-item {
   display: grid;
-  grid-template-columns: 24px 44px minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-columns: 34px 58px minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: center;
-  padding: 8px 10px;
-  border-radius: 14px;
+  padding: 10px 14px;
+  border-radius: 16px;
   background: rgba(255,255,255,.05);
   border: 1px solid transparent;
   transition: transform .2s ease, background .2s ease, border-color .2s ease;
-  min-height: 56px;
+  min-height: 66px;
 }
 
 .track-item:hover,
@@ -577,21 +577,22 @@ button { font-family: inherit; cursor: pointer; }
 .track-num {
   font-family: var(--display);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
+  text-align: center;
 }
 
 .track-thumb {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
+  width: 58px;
+  height: 48px;
+  border-radius: 12px;
   object-fit: cover;
   border: 1px solid rgba(255,255,255,.12);
 }
 
 .track-info strong {
   display: block;
-  font-size: 12px;
-  margin-bottom: 1px;
+  font-size: 14px;
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -599,7 +600,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .track-info span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -612,7 +613,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 .track-dur {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -717,7 +718,7 @@ audio { display: none; }
   }
 
   .playlist-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     max-height: calc(68vh - 78px);
   }
 
