@@ -7,6 +7,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const YOUTUBE_API_KEY = process.env.VITE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY || '';
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
+const activeListeners = new Map();
+const LISTENER_TIMEOUT_MS = 30000;
 
 const LOCAL_ANIME_CATALOG = []; /* legacy catalog retained below for reference
   { id: 'naruto-haruka-kanata', title: 'Haruka Kanata', artist: 'Asian Kung-Fu Generation', anime: 'Naruto', category: 'opening', youtubeVideoId: 'eP9r7W1K5YQ', youtubeUrl: 'https://www.youtube.com/watch?v=eP9r7W1K5YQ', thumbnail: 'https://i.ytimg.com/vi/eP9r7W1K5YQ/hqdefault.jpg', duration: 230, spotifyUrl: '' },
@@ -278,8 +280,13 @@ app.get('/api/quotes', (req, res) => {
 });
 
 app.get('/api/listeners', (req, res) => {
-  const count = 3842 + Math.floor(Math.random() * 250);
-  res.json({ count });
+  const clientId = (req.query.clientId || '').toString().trim();
+  const now = Date.now();
+  for (const [id, lastSeen] of activeListeners) {
+    if (now - lastSeen > LISTENER_TIMEOUT_MS) activeListeners.delete(id);
+  }
+  if (clientId) activeListeners.set(clientId, now);
+  res.json({ count: activeListeners.size });
 });
 
 app.get('*', (req, res) => {

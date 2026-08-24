@@ -22,6 +22,7 @@
   const openSpotifyBtn = $('#openSpotifyBtn');
   const openYoutubeBtn = $('#openYoutubeBtn');
   const volumeBtn = $('#volumeBtn');
+  const clockTime = $('#clockTime');
 
   const state = {
     playlists: {},
@@ -44,7 +45,9 @@
     progressTimer: null,
     currentVideoId: null,
     playlistLoading: false,
+    clientId: sessionStorage.getItem('animescape-client-id') || `listener-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`,
   };
+  sessionStorage.setItem('animescape-client-id', state.clientId);
 
   const FX = { snow: [], rain: [], sakura: [], sparkles: [] };
   const canvas = document.createElement('canvas');
@@ -157,12 +160,21 @@
 
   async function loadListeners() {
     try {
-      const response = await fetch('/api/listeners');
+      const response = await fetch(`/api/listeners?clientId=${encodeURIComponent(state.clientId)}`);
       const data = await response.json();
       listenerCount.textContent = Number(data.count || 0).toLocaleString();
     } catch {
       // Ignore listener errors silently.
     }
+  }
+
+  function updateClock() {
+    if (!clockTime) return;
+    clockTime.textContent = new Intl.DateTimeFormat(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(new Date());
   }
 
   function formatTime(value) {
@@ -676,6 +688,8 @@
     startProgressLoop();
     loadListeners();
     window.setInterval(loadListeners, 5000);
+    updateClock();
+    window.setInterval(updateClock, 1000);
     setPlaylistOpen(false);
     updatePlayerMeta({
       title: 'Main Character FM',
