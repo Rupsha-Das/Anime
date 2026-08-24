@@ -82,13 +82,13 @@ const LOCAL_ANIME_CATALOG = []; /* legacy catalog retained below for reference
 ]; */
 
 const YOUTUBE_PLAYLIST = {
-  id: 'pll4ge6p5xvlo',
+  id: 'plsp61ezpqpns',
   title: 'User YouTube Music Playlist',
   artist: 'YouTube Music',
   anime: 'Your playlist',
   category: 'playlist',
-  youtubePlaylistId: 'PLL4Ge6p5XVlo',
-  youtubeUrl: 'https://music.youtube.com/playlist?list=PLL4Ge6p5XVlo&si=B-d8klHBby7YRnYj',
+  youtubePlaylistId: 'PLSp61eZPQPns',
+  youtubeUrl: 'https://music.youtube.com/playlist?list=PLSp61eZPQPns&si=GKS1jNGnmWMUpP2P',
   thumbnail: 'https://i.ytimg.com/vi/0oI1pF9X0JQ/hqdefault.jpg',
   duration: 0,
   source: 'youtube-playlist'
