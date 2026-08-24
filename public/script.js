@@ -40,6 +40,7 @@
     lastSearch: '',
     playerReady: false,
     ytPlayer: null,
+    pendingPlayerAction: null,
     progressTimer: null,
     currentVideoId: null,
     playlistLoading: false,
@@ -375,6 +376,9 @@
           onReady: (event) => {
             state.playerReady = true;
             event.target.setVolume(state.muted ? 0 : state.volume);
+            const pendingAction = state.pendingPlayerAction;
+            state.pendingPlayerAction = null;
+            if (pendingAction) pendingAction(event.target);
           },
           onStateChange: (event) => {
             if (event.data === YT.PlayerState.PLAYING) {
@@ -404,6 +408,17 @@
     }
   }
 
+  function withReadyYouTube(action) {
+    ensureYouTubeApi(() => {
+      createYouTubePlayer();
+      if (state.playerReady && state.ytPlayer) {
+        action(state.ytPlayer);
+      } else {
+        state.pendingPlayerAction = action;
+      }
+    });
+  }
+
   function playTrackFromList(track, index, playlist = []) {
     if (!track) return;
     state.currentPlaylist = playlist.length ? playlist : state.songCatalog;
@@ -416,26 +431,23 @@
       return;
     }
 
-    ensureYouTubeApi(() => {
-      createYouTubePlayer();
-      if (state.ytPlayer && typeof state.ytPlayer.loadPlaylist === 'function' && track.youtubePlaylistId) {
-        state.ytPlayer.loadPlaylist({ list: track.youtubePlaylistId, index: 0 });
+    withReadyYouTube((player) => {
+      if (typeof player.loadPlaylist === 'function' && track.youtubePlaylistId) {
+        player.loadPlaylist({ list: track.youtubePlaylistId, index: 0 });
         state.currentVideoId = null;
         applyVolume();
         state.provider = 'youtube';
         setStatus(`Now playing: ${track.title}`, 'info');
-        setTimeout(() => state.ytPlayer?.playVideo?.(), 250);
+        player.playVideo?.();
         expandYouTubePlaylist(track);
-      } else if (state.ytPlayer && typeof state.ytPlayer.loadVideoById === 'function' && track.youtubeVideoId) {
-        state.ytPlayer.loadVideoById(track.youtubeVideoId);
+      } else if (typeof player.loadVideoById === 'function' && track.youtubeVideoId) {
+        player.loadVideoById(track.youtubeVideoId);
         state.currentVideoId = track.youtubeVideoId;
         applyVolume();
         state.provider = 'youtube';
         setStatus(`Now playing: ${track.title}`, 'info');
         setTimeout(() => {
-          if (state.ytPlayer && typeof state.ytPlayer.playVideo === 'function') {
-            state.ytPlayer.playVideo();
-          }
+          player.playVideo?.();
         }, 250);
       }
     });
@@ -550,10 +562,9 @@
       if (flattened[0]) {
         setCurrentTrack(flattened[0], 0, flattened);
         if (flattened[0].youtubePlaylistId) {
-          ensureYouTubeApi(() => {
-            createYouTubePlayer();
-            if (state.ytPlayer?.cuePlaylist) {
-              state.ytPlayer.cuePlaylist({ list: flattened[0].youtubePlaylistId, index: 0 });
+          withReadyYouTube((player) => {
+            if (player.cuePlaylist) {
+              player.cuePlaylist({ list: flattened[0].youtubePlaylistId, index: 0 });
               expandYouTubePlaylist(flattened[0]);
             }
           });
