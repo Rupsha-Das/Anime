@@ -42,6 +42,7 @@
     ytPlayer: null,
     progressTimer: null,
     currentVideoId: null,
+    playlistLoading: false,
   };
 
   const FX = { snow: [], rain: [], sakura: [], sparkles: [] };
@@ -172,7 +173,7 @@
 
   function normalizeTrack(raw, fallbackKey = '') {
     if (!raw || !raw.title) return null;
-    const youtubeVideoId = raw.youtubeVideoId || raw.youtubeVideoId || raw.id || '';
+    const youtubeVideoId = raw.youtubeVideoId || '';
     const duration = Number(raw.duration);
     return {
       id: raw.id || `track-${raw.youtubeVideoId || raw.spotifyTrackId || Math.random().toString(36).slice(2)}`,
@@ -183,6 +184,7 @@
       duration: Number.isFinite(duration) ? duration : 0,
       source: raw.source || 'youtube',
       youtubeVideoId: raw.youtubeVideoId || youtubeVideoId,
+      youtubePlaylistId: raw.youtubePlaylistId || '',
       youtubeUrl: raw.youtubeUrl || (youtubeVideoId ? `https://www.youtube.com/watch?v=${youtubeVideoId}` : ''),
       spotifyTrackId: raw.spotifyTrackId || '',
       spotifyUrl: raw.spotifyUrl || '',
@@ -286,6 +288,44 @@
     });
   }
 
+  async function expandYouTubePlaylist(track) {
+    if (!state.ytPlayer || !track?.youtubePlaylistId || state.playlistLoading) return;
+    state.playlistLoading = true;
+    setStatus('Loading the complete YouTube playlist…', 'info');
+
+    let ids = [];
+    for (let attempt = 0; attempt < 20 && !ids.length; attempt += 1) {
+      ids = typeof state.ytPlayer.getPlaylist === 'function' ? (state.ytPlayer.getPlaylist() || []) : [];
+      if (!ids.length) await new Promise(resolve => setTimeout(resolve, 250));
+    }
+
+    if (!ids.length) {
+      state.playlistLoading = false;
+      setStatus('YouTube did not return the playlist items. Open the playlist on YouTube Music to check access.', 'error');
+      return;
+    }
+
+    const metadata = await Promise.all(ids.map(async (videoId, index) => {
+      try {
+        const response = await fetch(`/api/youtube/oembed?videoId=${encodeURIComponent(videoId)}`);
+        if (response.ok) {
+          const data = await response.json();
+          return { id: `youtube-${videoId}`, title: data.title, artist: data.artist, thumbnail: data.thumbnail, youtubeVideoId: videoId, youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`, duration: 0, source: 'youtube-playlist', anime: 'YouTube Music', playlistKey: 'playlist', playlistIndex: index };
+        }
+      } catch {
+        // Keep the video in the list even if metadata is unavailable.
+      }
+      return { id: `youtube-${videoId}`, title: `Playlist track ${String(index + 1).padStart(2, '0')}`, artist: 'YouTube Music', thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, youtubeVideoId: videoId, youtubeUrl: `https://www.youtube.com/watch?v=${videoId}`, duration: 0, source: 'youtube-playlist', anime: 'YouTube Music', playlistKey: 'playlist', playlistIndex: index };
+    }));
+
+    state.songCatalog = metadata;
+    state.currentPlaylist = metadata;
+    renderTrackList(metadata);
+    state.playlistLoading = false;
+    setCurrentTrack(metadata[0], 0, metadata);
+    setStatus(`Loaded all ${metadata.length} songs from your YouTube Music playlist.`, 'info');
+  }
+
   function setCurrentTrack(track, index, playlist) {
     state.currentTrack = track;
     state.currentIndex = index;
@@ -344,7 +384,7 @@
               state.isPlaying = false;
               playBtn.textContent = '▶';
             } else if (event.data === YT.PlayerState.ENDED) {
-              advanceTrack(1);
+              if (!state.currentTrack?.youtubePlaylistId) advanceTrack(1);
             }
           },
           onError: () => {
@@ -371,14 +411,22 @@
     state.currentIndex = safeIndex >= 0 ? safeIndex : 0;
     setCurrentTrack(track, state.currentIndex, state.currentPlaylist);
 
-    if (!track.youtubeVideoId) {
-      setStatus('This result is missing a playable YouTube ID.', 'error');
+    if (!track.youtubeVideoId && !track.youtubePlaylistId) {
+      setStatus('This result is missing a playable YouTube ID or playlist.', 'error');
       return;
     }
 
     ensureYouTubeApi(() => {
       createYouTubePlayer();
-      if (state.ytPlayer && typeof state.ytPlayer.loadVideoById === 'function') {
+      if (state.ytPlayer && typeof state.ytPlayer.loadPlaylist === 'function' && track.youtubePlaylistId) {
+        state.ytPlayer.loadPlaylist({ list: track.youtubePlaylistId, index: 0 });
+        state.currentVideoId = null;
+        applyVolume();
+        state.provider = 'youtube';
+        setStatus(`Now playing: ${track.title}`, 'info');
+        setTimeout(() => state.ytPlayer?.playVideo?.(), 250);
+        expandYouTubePlaylist(track);
+      } else if (state.ytPlayer && typeof state.ytPlayer.loadVideoById === 'function' && track.youtubeVideoId) {
         state.ytPlayer.loadVideoById(track.youtubeVideoId);
         state.currentVideoId = track.youtubeVideoId;
         applyVolume();
@@ -501,6 +549,15 @@
       setStatus('Real anime music loaded.', 'info');
       if (flattened[0]) {
         setCurrentTrack(flattened[0], 0, flattened);
+        if (flattened[0].youtubePlaylistId) {
+          ensureYouTubeApi(() => {
+            createYouTubePlayer();
+            if (state.ytPlayer?.cuePlaylist) {
+              state.ytPlayer.cuePlaylist({ list: flattened[0].youtubePlaylistId, index: 0 });
+              expandYouTubePlaylist(flattened[0]);
+            }
+          });
+        }
       }
     } catch (error) {
       console.error(error);

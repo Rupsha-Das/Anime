@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 const YOUTUBE_API_KEY = process.env.VITE_YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY || '';
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 
-const LOCAL_ANIME_CATALOG = [
+const LOCAL_ANIME_CATALOG = []; /* legacy catalog retained below for reference
   { id: 'naruto-haruka-kanata', title: 'Haruka Kanata', artist: 'Asian Kung-Fu Generation', anime: 'Naruto', category: 'opening', youtubeVideoId: 'eP9r7W1K5YQ', youtubeUrl: 'https://www.youtube.com/watch?v=eP9r7W1K5YQ', thumbnail: 'https://i.ytimg.com/vi/eP9r7W1K5YQ/hqdefault.jpg', duration: 230, spotifyUrl: '' },
   { id: 'naruto-shippuden-sign', title: 'Sign', artist: 'FLOW', anime: 'Naruto Shippuden', category: 'opening', youtubeVideoId: 'V5ZpL1XxX7o', youtubeUrl: 'https://www.youtube.com/watch?v=V5ZpL1XxX7o', thumbnail: 'https://i.ytimg.com/vi/V5ZpL1XxX7o/hqdefault.jpg', duration: 252, spotifyUrl: '' },
   { id: 'naruto-blue-bird', title: 'Blue Bird', artist: 'Ikimono Gakari', anime: 'Naruto Shippuden', category: 'opening', youtubeVideoId: '8PxxEw7E7vE', youtubeUrl: 'https://www.youtube.com/watch?v=8PxxEw7E7vE', thumbnail: 'https://i.ytimg.com/vi/8PxxEw7E7vE/hqdefault.jpg', duration: 227, spotifyUrl: '' },
@@ -79,7 +79,20 @@ const LOCAL_ANIME_CATALOG = [
   { id: 'night-3', title: 'Night Drive', artist: 'Ado', anime: 'Suzume', category: 'night', youtubeVideoId: '0E7N3fZU2mU', youtubeUrl: 'https://www.youtube.com/watch?v=0E7N3fZU2mU', thumbnail: 'https://i.ytimg.com/vi/0E7N3fZU2mU/hqdefault.jpg', duration: 228, spotifyUrl: '' },
   { id: 'night-4', title: 'Anata ni', artist: 'Mitski', anime: 'A Silent Voice', category: 'night', youtubeVideoId: 'adjtX5LqAHI', youtubeUrl: 'https://www.youtube.com/watch?v=adjtX5LqAHI', thumbnail: 'https://i.ytimg.com/vi/adjtX5LqAHI/hqdefault.jpg', duration: 235, spotifyUrl: '' },
   { id: 'night-5', title: 'Moonlight', artist: 'RADWIMPS', anime: 'Your Name', category: 'night', youtubeVideoId: 'BvllR6vKhVg', youtubeUrl: 'https://www.youtube.com/watch?v=BvllR6vKhVg', thumbnail: 'https://i.ytimg.com/vi/BvllR6vKhVg/hqdefault.jpg', duration: 242, spotifyUrl: '' }
-];
+]; */
+
+const YOUTUBE_PLAYLIST = {
+  id: 'pll4ge6p5xvlo',
+  title: 'User YouTube Music Playlist',
+  artist: 'YouTube Music',
+  anime: 'Your playlist',
+  category: 'playlist',
+  youtubePlaylistId: 'PLL4Ge6p5XVlo',
+  youtubeUrl: 'https://music.youtube.com/playlist?list=PLL4Ge6p5XVlo&si=B-d8klHBby7YRnYj',
+  thumbnail: 'https://i.ytimg.com/vi/0oI1pF9X0JQ/hqdefault.jpg',
+  duration: 0,
+  source: 'youtube-playlist'
+};
 
 const WALLPAPERS = [
   { id: 1, name: 'Sakura Sunrise', ja: '桜の朝', mood: 'Hopeful', scene: 'sakura' },
@@ -109,12 +122,13 @@ function formatDuration(seconds) {
 
 function getInitialAnimeTracks() {
   const grouped = {
-    opening: { title: 'Opening', tag: 'OPENINGS', accent: '#ff7ec8', description: 'Anime opening songs.', songs: [] },
-    ending: { title: 'Ending', tag: 'ENDINGS', accent: '#8be9fd', description: 'Anime ending songs.', songs: [] },
-    hype: { title: 'Hype', tag: 'HYPE', accent: '#ffb86c', description: 'Energetic anime tracks.', songs: [] },
-    emotional: { title: 'Emotional', tag: 'EMOTIONAL', accent: '#f9a8d4', description: 'Sad and emotional anime songs.', songs: [] },
-    romance: { title: 'Romance', tag: 'ROMANCE', accent: '#ff9d9d', description: 'Romantic anime songs.', songs: [] },
-    night: { title: 'Night', tag: 'NIGHT', accent: '#bd93f9', description: 'Dreamy late-night anime tracks.', songs: [] }
+    playlist: {
+      title: YOUTUBE_PLAYLIST.title,
+      tag: 'PLAYLIST',
+      accent: '#ff7ec8',
+      description: 'Songs from your YouTube Music playlist.',
+      songs: [{ ...YOUTUBE_PLAYLIST }]
+    }
   };
 
   LOCAL_ANIME_CATALOG.forEach((track) => {
@@ -187,14 +201,14 @@ async function searchYoutubeTracks(query, limit = 10) {
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/config', (req, res) => {
-  const hasLocalCatalog = Array.isArray(LOCAL_ANIME_CATALOG) && LOCAL_ANIME_CATALOG.length > 0;
+  const hasPlaylist = Boolean(YOUTUBE_PLAYLIST.youtubePlaylistId);
 
   res.json({
-    ready: hasLocalCatalog,
+    ready: hasPlaylist,
     youtubeConfigured: Boolean(YOUTUBE_API_KEY),
     youtubeApiKey: YOUTUBE_API_KEY ? 'configured' : 'missing',
-    message: hasLocalCatalog
-      ? 'Local anime catalog is available. Live YouTube search is optional.'
+    message: hasPlaylist
+      ? 'Configured YouTube playlist is available. Live YouTube search is optional.'
       : 'Missing VITE_YOUTUBE_API_KEY. Add it to your .env file and restart the server before using live YouTube search.'
   });
 });
@@ -236,6 +250,25 @@ app.get('/api/youtube/search', async (req, res) => {
   }
 });
 
+app.get('/api/youtube/oembed', async (req, res) => {
+  const videoId = (req.query.videoId || '').toString().trim();
+  if (!/^[\w-]{6,}$/.test(videoId)) {
+    return res.status(400).json({ error: 'Valid YouTube video ID required.' });
+  }
+
+  try {
+    const data = await fetchJson(`https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`);
+    res.json({
+      videoId,
+      title: data.title || `YouTube track ${videoId}`,
+      artist: data.author_name || 'YouTube Music',
+      thumbnail: data.thumbnail_url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+    });
+  } catch (error) {
+    res.status(502).json({ error: 'Could not load YouTube track metadata.' });
+  }
+});
+
 app.get('/api/wallpapers', (req, res) => {
   res.json(WALLPAPERS);
 });
@@ -256,7 +289,7 @@ app.get('*', (req, res) => {
 function startServer(port, attempts = 0) {
   const p = Number(port) || 3000;
   const server = app.listen(p, () => {
-    console.log('[AnimeMusic] Loaded local catalog with 60 seeded tracks');
+    console.log('[AnimeMusic] Loaded configured YouTube playlist');
     console.log(`ANIMESCAPE running at http://localhost:${p}`);
     console.log(`  YouTube API configured: ${YOUTUBE_API_KEY ? 'true' : 'false'}`);
     console.log(`  Playlists API:  http://localhost:${p}/api/songs`);
