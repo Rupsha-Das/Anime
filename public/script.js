@@ -23,6 +23,7 @@
   const openYoutubeBtn = $('#openYoutubeBtn');
   const volumeBtn = $('#volumeBtn');
   const clockTime = $('#clockTime');
+  const profileButton = $('[aria-label="Profile"]');
 
   const state = {
     playlists: {},
@@ -222,6 +223,20 @@
     const buttonMarkup = shouldRetry ? '<button class="status-retry" data-retry="true">Try again</button>' : '';
     playlistStatus.innerHTML = `${message}${buttonMarkup}`;
     playlistStatus.dataset.type = type;
+  }
+
+  function showToast(message) {
+    let toast = $('#actionToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'actionToast';
+      toast.className = 'action-toast';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add('visible');
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove('visible'), 2200);
   }
 
   function renderSkeleton(count = 3) {
@@ -639,17 +654,23 @@
 
     if (openSpotifyBtn) {
       openSpotifyBtn.addEventListener('click', () => {
-        if (!state.currentTrack?.spotifyUrl) return;
-        window.open(state.currentTrack.spotifyUrl, '_blank', 'noopener,noreferrer');
+        const track = state.currentTrack;
+        if (!track) return showToast('Select a track first.');
+        const url = track.spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(`${track.title} ${track.artist}`)}`;
+        window.open(url, '_blank', 'noopener,noreferrer');
       });
     }
 
     if (openYoutubeBtn) {
       openYoutubeBtn.addEventListener('click', () => {
-        if (!state.currentTrack?.youtubeUrl) return;
-        window.open(state.currentTrack.youtubeUrl, '_blank', 'noopener,noreferrer');
+        const track = state.currentTrack;
+        if (!track) return showToast('Select a track first.');
+        const url = track.youtubeUrl || (track.youtubeVideoId ? `https://www.youtube.com/watch?v=${track.youtubeVideoId}` : `https://www.youtube.com/results?search_query=${encodeURIComponent(`${track.title} ${track.artist}`)}`);
+        window.open(url, '_blank', 'noopener,noreferrer');
       });
     }
+
+    if (profileButton) profileButton.addEventListener('click', () => showToast('Profile is coming soon.'));
 
     trackSearch.addEventListener('keydown', event => {
       if (event.key === 'Enter') {
