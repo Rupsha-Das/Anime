@@ -40,7 +40,7 @@ VITE_YOUTUBE_API_KEY=your_youtube_data_api_key
 PORT=3000
 ```
 
-The local catalog is available without a YouTube key. `VITE_SPOTIFY_CLIENT_ID` and `VITE_SPOTIFY_REDIRECT_URI` are reserved for future Spotify integration and are not required by the current server.
+The local catalog is available without a YouTube key.
 
 ## API endpoints
 
@@ -67,7 +67,7 @@ npm run songs
 ```text
 public/              Frontend HTML, CSS, JavaScript, and audio assets
 src/data/             Anime catalog data
-src/services/         YouTube and Spotify service helpers
+src/services/         Media service helpers
 scripts/              Catalog/build utilities
 server.js             Express server and API routes
 generate-audio.js     Procedural audio asset generator

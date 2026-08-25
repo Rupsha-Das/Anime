@@ -8,7 +8,6 @@ export interface AnimeTrack {
   youtubeUrl: string;
   thumbnail: string;
   duration?: number;
-  spotifyUrl?: string;
 }
 
 export const animeTracks: AnimeTrack[] = [

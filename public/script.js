@@ -19,7 +19,6 @@
   const listenerCount = $('#listenerCount');
   const playlistCloseBtn = $('[data-action="playlist-close"]');
   const playerThumb = $('.player-thumb');
-  const openSpotifyBtn = $('#openSpotifyBtn');
   const openYoutubeBtn = $('#openYoutubeBtn');
   const volumeBtn = $('#volumeBtn');
   const clockTime = $('#clockTime');
@@ -190,7 +189,7 @@
     const youtubeVideoId = raw.youtubeVideoId || '';
     const duration = Number(raw.duration);
     return {
-      id: raw.id || `track-${raw.youtubeVideoId || raw.spotifyTrackId || Math.random().toString(36).slice(2)}`,
+      id: raw.id || `track-${raw.youtubeVideoId || Math.random().toString(36).slice(2)}`,
       title: raw.title,
       artist: raw.artist || raw.channelTitle || 'Unknown artist',
       album: raw.album || raw.anime || 'Anime track',
@@ -200,8 +199,6 @@
       youtubeVideoId: raw.youtubeVideoId || youtubeVideoId,
       youtubePlaylistId: raw.youtubePlaylistId || '',
       youtubeUrl: raw.youtubeUrl || (youtubeVideoId ? `https://www.youtube.com/watch?v=${youtubeVideoId}` : ''),
-      spotifyTrackId: raw.spotifyTrackId || '',
-      spotifyUrl: raw.spotifyUrl || '',
       anime: raw.anime || fallbackKey || 'Anime track',
       playlistKey: raw.playlistKey || fallbackKey,
     };
@@ -651,15 +648,6 @@
       applyVolume();
       volumeBtn.textContent = state.muted ? '🔇' : '♪';
     });
-
-    if (openSpotifyBtn) {
-      openSpotifyBtn.addEventListener('click', () => {
-        const track = state.currentTrack;
-        if (!track) return showToast('Select a track first.');
-        const url = track.spotifyUrl || `https://open.spotify.com/search/${encodeURIComponent(`${track.title} ${track.artist}`)}`;
-        window.open(url, '_blank', 'noopener,noreferrer');
-      });
-    }
 
     if (openYoutubeBtn) {
       openYoutubeBtn.addEventListener('click', () => {
