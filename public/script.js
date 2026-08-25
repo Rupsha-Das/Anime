@@ -23,6 +23,13 @@
   const volumeBtn = $('#volumeBtn');
   const clockTime = $('#clockTime');
   const profileButton = $('[aria-label="Profile"]');
+  const backgroundPanel = $('#backgroundPanel');
+  const backgroundFile = $('#backgroundFile');
+  const backgroundImage = $('#customBackgroundImage');
+  const backgroundVideo = $('#customBackgroundVideo');
+  const backgroundStatus = $('#backgroundStatus');
+  const resetBackgroundBtn = $('#resetBackgroundBtn');
+  const dayNightToggle = $('[data-action="daynight-toggle"]');
 
   const state = {
     playlists: {},
@@ -45,6 +52,10 @@
     progressTimer: null,
     currentVideoId: null,
     playlistLoading: false,
+    customBackgroundUrl: null,
+    customBackgroundKind: null,
+    customBackgroundObjectUrl: false,
+    dayNightMode: localStorage.getItem('animescape-day-night-mode') || 'auto',
     clientId: sessionStorage.getItem('animescape-client-id') || `listener-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`,
   };
   sessionStorage.setItem('animescape-client-id', state.clientId);
@@ -601,6 +612,113 @@
     }
   }
 
+  function setBackgroundPanelOpen(open) {
+    if (!backgroundPanel) return;
+    backgroundPanel.classList.toggle('open', open);
+    backgroundPanel.setAttribute('aria-hidden', String(!open));
+  }
+
+  function applyDayNightMode() {
+    const hour = new Date().getHours();
+    const isDay = state.dayNightMode === 'day' || (state.dayNightMode === 'auto' && hour >= 6 && hour < 18);
+    document.body.classList.toggle('day-mode', isDay);
+    document.body.classList.toggle('night-mode', !isDay);
+    if (dayNightToggle) {
+      const label = state.dayNightMode[0].toUpperCase() + state.dayNightMode.slice(1);
+      dayNightToggle.title = `Day/night: ${label}`;
+      dayNightToggle.setAttribute('aria-label', `Day/night mode: ${label}. Click to change.`);
+      dayNightToggle.classList.toggle('active', state.dayNightMode !== 'auto');
+    }
+  }
+
+  function cycleDayNightMode() {
+    const modes = ['auto', 'day', 'night'];
+    state.dayNightMode = modes[(modes.indexOf(state.dayNightMode) + 1) % modes.length];
+    localStorage.setItem('animescape-day-night-mode', state.dayNightMode);
+    applyDayNightMode();
+    showToast(`Day/night mode: ${state.dayNightMode}`);
+  }
+
+  function setBackgroundStatus(message) {
+    if (backgroundStatus) backgroundStatus.textContent = message;
+  }
+
+  function showBackgroundMedia(kind, url, persisted = false) {
+    if (!backgroundImage || !backgroundVideo) return;
+    backgroundImage.classList.toggle('active', kind === 'image');
+    backgroundVideo.classList.toggle('active', kind === 'video');
+    if (kind === 'image') {
+      backgroundImage.src = url;
+      backgroundVideo.pause();
+      backgroundVideo.removeAttribute('src');
+      backgroundVideo.load();
+    } else {
+      backgroundVideo.src = url;
+      backgroundVideo.play().catch(() => {});
+      backgroundImage.removeAttribute('src');
+    }
+    state.customBackgroundUrl = url;
+    state.customBackgroundKind = kind;
+    state.customBackgroundObjectUrl = !persisted;
+  }
+
+  function resetBackground() {
+    if (state.customBackgroundObjectUrl && state.customBackgroundUrl) {
+      URL.revokeObjectURL(state.customBackgroundUrl);
+    }
+    localStorage.removeItem('animescape-custom-background');
+    backgroundImage?.classList.remove('active');
+    backgroundVideo?.classList.remove('active');
+    backgroundVideo?.pause();
+    backgroundImage?.removeAttribute('src');
+    backgroundVideo?.removeAttribute('src');
+    state.customBackgroundUrl = null;
+    state.customBackgroundKind = null;
+    state.customBackgroundObjectUrl = false;
+    setBackgroundStatus('Default anime scene active.');
+    if (backgroundFile) backgroundFile.value = '';
+  }
+
+  function applyBackgroundFile(file) {
+    if (!file) return;
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      setBackgroundStatus('Please choose an image, GIF, or video file.');
+      return;
+    }
+    if (state.customBackgroundObjectUrl && state.customBackgroundUrl) {
+      URL.revokeObjectURL(state.customBackgroundUrl);
+    }
+    const kind = file.type.startsWith('video/') ? 'video' : 'image';
+    const url = URL.createObjectURL(file);
+    showBackgroundMedia(kind, url);
+    setBackgroundStatus(`${file.name} active for this session.`);
+
+    if (kind === 'image' && file.size <= 4 * 1024 * 1024) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          localStorage.setItem('animescape-custom-background', JSON.stringify({ kind, data: reader.result }));
+          setBackgroundStatus(`${file.name} active and saved on this device.`);
+        } catch (error) {
+          console.warn('Could not save custom background.', error);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function restoreBackground() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('animescape-custom-background') || 'null');
+      if (saved?.kind && saved.data) {
+        showBackgroundMedia(saved.kind, saved.data, true);
+        setBackgroundStatus('Your saved anime scene is active.');
+      }
+    } catch (error) {
+      localStorage.removeItem('animescape-custom-background');
+    }
+  }
+
   function attachEvents() {
     weatherButtons.forEach(button => {
       button.addEventListener('click', () => setWeather(button.dataset.fx));
@@ -609,6 +727,14 @@
     const toggleButton = $('[data-action="playlist-toggle"]');
     if (toggleButton) toggleButton.addEventListener('click', togglePlaylist);
     if (playlistCloseBtn) playlistCloseBtn.addEventListener('click', () => setPlaylistOpen(false));
+
+    const backgroundToggle = $('[data-action="background-toggle"]');
+    const backgroundClose = $('[data-action="background-close"]');
+    if (backgroundToggle) backgroundToggle.addEventListener('click', () => setBackgroundPanelOpen(true));
+    if (backgroundClose) backgroundClose.addEventListener('click', () => setBackgroundPanelOpen(false));
+    if (backgroundFile) backgroundFile.addEventListener('change', event => applyBackgroundFile(event.target.files?.[0]));
+    if (resetBackgroundBtn) resetBackgroundBtn.addEventListener('click', resetBackground);
+    if (dayNightToggle) dayNightToggle.addEventListener('click', cycleDayNightMode);
 
     $('#prevBtn').addEventListener('click', () => advanceTrack(-1));
     $('#nextBtn').addEventListener('click', () => advanceTrack(1));
@@ -694,10 +820,13 @@
     window.addEventListener('resize', resize);
     tickFx();
     attachEvents();
+    restoreBackground();
+    applyDayNightMode();
     startProgressLoop();
     loadListeners();
     window.setInterval(loadListeners, 5000);
     updateClock();
+    window.setInterval(applyDayNightMode, 60000);
     window.setInterval(updateClock, 1000);
     setPlaylistOpen(false);
     updatePlayerMeta({

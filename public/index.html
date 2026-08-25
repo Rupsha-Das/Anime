@@ -34,6 +34,8 @@
       </div>
 
       <div class="top-right">
+        <button class="icon-btn" data-action="daynight-toggle" title="Day/night: Auto" aria-label="Toggle day and night cycle">DN</button>
+        <button class="icon-btn" data-action="background-toggle" title="Customize anime background" aria-label="Customize anime background">BG</button>
         <button class="icon-btn weather-btn active" data-fx="snow" title="Snow">❄</button>
         <button class="icon-btn weather-btn" data-fx="rain" title="Rain">☂</button>
         <button class="icon-btn weather-btn" data-fx="sakura" title="Sakura">✿</button>
@@ -46,6 +48,8 @@
     <main class="page">
       <section class="hero" id="top">
         <div class="hero-art" aria-hidden="true">
+          <img id="customBackgroundImage" class="custom-background-media" alt="" />
+          <video id="customBackgroundVideo" class="custom-background-media" autoplay muted loop playsinline></video>
           <div class="scene-photo"></div>
         </div>
 
@@ -105,6 +109,26 @@
 
         <div id="playlistStatus" class="playlist-status">Loading real anime tracks...</div>
         <div class="playlist-list" id="trackList"></div>
+      </section>
+      <section class="background-panel glass-card" id="backgroundPanel" aria-labelledby="backgroundTitle" aria-hidden="true">
+        <div class="playlist-head">
+          <div>
+            <p class="mini-label">Scene creator</p>
+            <h2 id="backgroundTitle">Make it your anime</h2>
+          </div>
+          <button class="close-btn" data-action="background-close" aria-label="Close background settings">X</button>
+        </div>
+        <p class="background-help">Upload a photo, animated GIF, or short anime video to use as your cinematic background.</p>
+        <label class="upload-dropzone" for="backgroundFile">
+          <span class="upload-icon">+</span>
+          <strong>Choose image, GIF, or video</strong>
+          <small>JPG, PNG, WebP, GIF, MP4, or WebM</small>
+        </label>
+        <input id="backgroundFile" type="file" accept="image/*,video/mp4,video/webm,video/ogg" hidden />
+        <div class="background-actions">
+          <button id="resetBackgroundBtn" class="ghost-btn" type="button">Use default scene</button>
+          <span id="backgroundStatus" class="background-status">Default anime scene active.</span>
+        </div>
       </section>
     </main>
   </div>
